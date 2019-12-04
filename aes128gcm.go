@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"github/wziww/medusa/config"
 	"github/wziww/medusa/log"
 	"io"
@@ -48,7 +47,7 @@ func (conn *TCPConn) DecodeRead(buf []byte) (n int, err error) {
 		log.FMTLog(log.LOGERROR, err)
 		return
 	}
-	if res := decode(buf); res != nil {
+	if res := decode(buf[:n]); res != nil {
 		buf = res
 		return
 	}
@@ -118,7 +117,6 @@ func (conn *TCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
 	buf := make([]byte, bufSize)
 	for {
 		readCount, errRead := conn.Read(buf)
-		fmt.Println(string(buf))
 		if errRead != nil {
 			if errRead != io.EOF {
 				return errRead
@@ -126,7 +124,6 @@ func (conn *TCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
 			return nil
 		}
 		if readCount > 0 {
-			fmt.Println(string(buf[:readCount]))
 			writeCount, errWrite := (&TCPConn{
 				ReadWriteCloser: dst,
 			}).EncodeWrite(buf[:readCount])

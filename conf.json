@@ -12,7 +12,8 @@
   },
   "log": {
     "logLevel": [
-      "LOGINFO"
+      "LOGINFO",
+      "LOGERROR"
     ],
     "logPath": "stdout"
   }
