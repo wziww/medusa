@@ -14,7 +14,7 @@
     "logLevel": [
       "LOGINFO",
       "LOGERROR",
-      "LOGEDEBUG"
+      "LOGDEBUG"
     ],
     "logPath": "stdout"
   }
