@@ -3,6 +3,7 @@ package medusa
 import (
 	"encoding/binary"
 	"errors"
+	"github/wziww/medusa/encrpt"
 	"github/wziww/medusa/log"
 	"io"
 )
@@ -12,7 +13,7 @@ var bufSize int = 1024
 // TCPConn ...
 type TCPConn struct {
 	io.ReadWriteCloser
-	Encryptor Encryptor
+	Encryptor encrpt.Encryptor
 }
 
 // DecodeRead ...

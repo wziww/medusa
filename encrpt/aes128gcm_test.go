@@ -1,11 +1,12 @@
-package medusa
+package encrpt
 
 import (
+	"github/wziww/encrpt"
 	"testing"
 )
 
 var password []byte = []byte("AES256Key-32Characters1234567890")
-var aesobj *Aes128gcm = &Aes128gcm{
+var aesobj *encrpt.Aes128gcm = &encrpt.Aes128gcm{
 	Password: &password,
 }
 
