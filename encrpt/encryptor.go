@@ -1,4 +1,4 @@
-package medusa
+package encrpt
 
 // Encryptor ...
 type Encryptor interface {

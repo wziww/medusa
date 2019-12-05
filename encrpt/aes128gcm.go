@@ -1,4 +1,4 @@
-package medusa
+package encrpt
 
 import (
 	"crypto/aes"

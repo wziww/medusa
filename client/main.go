@@ -3,6 +3,7 @@ package main
 import (
 	"github/wziww/medusa"
 	"github/wziww/medusa/config"
+	"github/wziww/medusa/encrpt"
 	"github/wziww/medusa/log"
 	"net"
 	"os"
@@ -16,7 +17,7 @@ func main() {
 		os.Exit(0)
 	}
 	password := []byte(config.C.Base.Password)
-	encryptor := medusa.InitEncrypto(&password, config.C.Base.Crypto)
+	encryptor := encrpt.InitEncrypto(&password, config.C.Base.Crypto)
 	if encryptor == nil {
 		log.FMTLog(log.LOGERROR, "unsupport encrypto:", config.C.Base.Crypto)
 		os.Exit(0)
