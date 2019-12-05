@@ -1,4 +1,4 @@
-### config-example
+### 配置示例
 ```js
 {
   "base": {
