@@ -17,6 +17,13 @@ type TCPConn struct {
 
 // DecodeRead ...
 func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
+	// /**
+	//   +----+-----+-------+------+----------+----------+
+	//   |LEN | 								DATA 										|
+	//   +----+-----+-------+------+----------+----------+
+	//   | 4  | 								 x  									   |
+	//   +----+-----+-------+------+----------+----------+
+	// */
 	var l int64
 	binary.Read(conn, binary.BigEndian, &l)
 	data := make([]byte, l)
@@ -37,6 +44,13 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 	buf = conn.Encryptor.Encode(buf)
 	if buf != nil {
+		// /**
+		//   +----+-----+-------+------+----------+----------+
+		//   |LEN | 								DATA 										|
+		//   +----+-----+-------+------+----------+----------+
+		//   | 4  | 								 x  									   |
+		//   +----+-----+-------+------+----------+----------+
+		// */
 		var l int64 = int64(len(buf))
 		binary.Write(conn, binary.BigEndian, l)
 		return conn.Write(buf)
