@@ -54,7 +54,8 @@ func init() {
 	dir := config.C.Log.LogPath
 	LOGFILETIME := time.Now().Format("2006010215")
 	if dir == "" || strings.ToLower(dir) != "stdout" {
-		fd, err := os.OpenFile(path.Join(dir, LOGFILETIME), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+		fd, err := os.OpenFile(path.Join(dir, LOGFILETIME),
+			os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -65,15 +66,18 @@ func init() {
 				select {
 				case <-time.After(time.Second * 30):
 					CURRENTTIME := time.Now().Format("2006010215")
-					if CURRENTTIME != LOGFILETIME {
-						fd, err := os.OpenFile(path.Join(dir, CURRENTTIME), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-						f.Set(fd)
-						if err != nil {
-							fmt.Println(err)
-							os.Exit(0)
-						}
-						LOGFILETIME = CURRENTTIME
+					if CURRENTTIME == LOGFILETIME {
+						continue
 					}
+					// path/2006010215
+					fd, err := os.OpenFile(path.Join(dir, CURRENTTIME),
+						os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+					f.Set(fd)
+					if err != nil {
+						fmt.Println(err)
+						os.Exit(0)
+					}
+					LOGFILETIME = CURRENTTIME
 				}
 			}
 		}()
