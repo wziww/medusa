@@ -36,7 +36,7 @@ func handleConn(userConn *medusa.TCPConn) {
 	go func() {
 		err := proxyServerTCP.DecodeCopy(userConn)
 		if err != nil {
-			log.FMTLog(log.LOGERROR, err)
+			log.FMTLog(log.LOGDEBUG, err)
 			// 在 copy 的过程中可能会存在网络超时等 error 被 return，只要有一个发生了错误就退出本次工作
 			userConn.Close()
 			proxyServer.Close()

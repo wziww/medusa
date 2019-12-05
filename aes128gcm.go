@@ -31,7 +31,7 @@ func (st *Aes128gcm) Decode(buf []byte) []byte {
 	}
 	plaintext, err := aesgcm.Open(nil, nonce, buf, nil)
 	if err != nil {
-		log.FMTLog(log.LOGERROR, err)
+		log.FMTLog(log.LOGDEBUG, err)
 		return nil
 	}
 	return plaintext
