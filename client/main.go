@@ -15,6 +15,12 @@ func main() {
 		log.FMTLog(log.LOGERROR, resoveErr)
 		os.Exit(0)
 	}
+	password := []byte(config.C.Base.Password)
+	encryptor := medusa.InitEncrypto(&password, config.C.Base.Crypto)
+	if encryptor == nil {
+		log.FMTLog(log.LOGERROR, "unsupport encrypto:", config.C.Base.Crypto)
+		os.Exit(0)
+	}
 	listener, listenErr := net.ListenTCP("tcp", addr)
 	if listenErr != nil {
 		log.FMTLog(log.LOGERROR, listenErr)
@@ -32,6 +38,7 @@ func main() {
 		localConn.SetLinger(0)
 		go handleConn(&medusa.TCPConn{
 			ReadWriteCloser: localConn,
+			Encryptor:       encryptor,
 		})
 	}
 }

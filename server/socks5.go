@@ -9,8 +9,9 @@ import (
 
 // https://www.ietf.org/rfc/rfc1928.txt
 func handleConn(conn *medusa.TCPConn) {
-	defer conn.Close()
-	buf := make([]byte, 256)
+	defer func() {
+		conn.Close()
+	}()
 
 	/**
 	   The localConn connects to the dstServer, and sends a ver
@@ -25,7 +26,7 @@ func handleConn(conn *medusa.TCPConn) {
 	   appear in the METHODS field.
 	*/
 	// 第一个字段VER代表Socks的版本，Socks5默认为0x05，其固定长度为1个字节
-	_, err := conn.DecodeRead(buf)
+	_, buf, err := conn.DecodeRead()
 	// 只支持版本5
 	if err != nil {
 		log.FMTLog(log.LOGERROR, err)
@@ -57,7 +58,7 @@ func handleConn(conn *medusa.TCPConn) {
 	// */
 
 	// // 获取真正的远程服务的地址
-	n, err := conn.DecodeRead(buf)
+	n, buf, err := conn.DecodeRead()
 	// // n 最短的长度为7 情况为 ATYP=3 DST.ADDR占用1字节 值为0x0
 	if err != nil || n < 7 {
 		log.FMTLog(log.LOGERROR, err)
@@ -130,5 +131,6 @@ func handleConn(conn *medusa.TCPConn) {
 	// 从 dstServer 读取数据发送到 localUser，这里因为处在翻墙阶段出现网络错误的概率更大
 	(&medusa.TCPConn{
 		ReadWriteCloser: dstServer,
+		Encryptor:       conn.Encryptor,
 	}).EncodeCopy(conn)
 }

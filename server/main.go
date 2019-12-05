@@ -15,6 +15,12 @@ func main() {
 		log.FMTLog(log.LOGERROR, resoveErr)
 		os.Exit(0)
 	}
+	password := []byte(config.C.Base.Password)
+	encryptor := medusa.InitEncrypto(&password, config.C.Base.Crypto)
+	if encryptor == nil {
+		log.FMTLog(log.LOGERROR, "unsupport encrypto:", config.C.Base.Crypto)
+		os.Exit(0)
+	}
 	listener, listenErr := net.ListenTCP("tcp", addr)
 	if listenErr != nil {
 		log.FMTLog(log.LOGERROR, listenErr)
@@ -28,11 +34,12 @@ func main() {
 			log.FMTLog(log.LOGERROR, err)
 			continue
 		}
-		log.FMTLog(log.LOGINFO, localConn.RemoteAddr(), "connected")
+		// log.FMTLog(log.LOGINFO, localConn.RemoteAddr(), "connected")
 		// localConn被关闭时直接清除所有数据 不管没有发送的数据
 		localConn.SetLinger(0)
 		go handleConn(&medusa.TCPConn{
 			ReadWriteCloser: localConn,
+			Encryptor:       encryptor,
 		})
 	}
 }
