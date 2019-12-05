@@ -22,7 +22,7 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	data := make([]byte, l)
 	n, err = conn.Read(data)
 	if err != nil {
-		log.FMTLog(log.LOGERROR, err)
+		log.FMTLog(log.LOGDEBUG, err)
 		return
 	}
 	if res := conn.Encryptor.Decode(data[:n]); res != nil {
