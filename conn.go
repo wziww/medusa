@@ -5,7 +5,9 @@ import (
 	"errors"
 	"github/wziww/medusa/encrpt"
 	"github/wziww/medusa/log"
+	"github/wziww/medusa/stream"
 	"io"
+	"sync/atomic"
 )
 
 var bufSize int = 1024
@@ -27,6 +29,7 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	// */
 	var l int64
 	binary.Read(conn, binary.BigEndian, &l)
+	atomic.AddUint64(stream.FlowIn, uint64(l))
 	data := make([]byte, l)
 	n, err = conn.Read(data)
 	if err != nil {
@@ -53,6 +56,7 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 		//   +----+-----+-------+------+----------+----------+
 		// */
 		var l int64 = int64(len(buf))
+		atomic.AddUint64(stream.FlowOut, uint64(l))
 		binary.Write(conn, binary.BigEndian, l)
 		return conn.Write(buf)
 	}

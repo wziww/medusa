@@ -23,6 +23,13 @@ type Config struct {
 type Base struct {
 	Password string `json:"password"`
 	Crypto   string `json:"crypto"`
+	API      API    `json:"api"`
+}
+
+// API 相关配置
+type API struct {
+	Port   int  `json:"port"`
+	Enable bool `json:"enable"`
 }
 
 // Server 服务端配置

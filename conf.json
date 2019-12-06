@@ -1,7 +1,11 @@
 {
   "base": {
     "password": "AES256Key-32Characters1234567890",
-    "crypto": "aes-128-gcm"
+    "crypto": "aes-128-gcm",
+    "api": {
+      "port": 8082,
+      "enable": true
+    }
   },
   "server": {
     "port": 8080
