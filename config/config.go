@@ -54,6 +54,10 @@ type Client struct {
 }
 
 func init() {
+	/**
+	 * 文件加载流程 => 使用指定文件
+	 * 默认文件：config 文件夹下 conf.json 或者项目根目录下 conf.json
+	 */
 	configPath := flag.String("c", "../conf.json", "config path")
 	flag.Parse()
 	if C == nil {
