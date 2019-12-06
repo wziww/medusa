@@ -19,13 +19,22 @@ func main() {
 	}
 	config.C.Base.Client = true
 	log.FMTLog(log.LOGINFO, "client start")
+	/*
+	 * api 服务初始化
+	 */
 	stream.APIServerInit()
+	/*
+	 * 加密器初始化
+	 */
 	password := []byte(config.C.Base.Password)
 	encryptor := encrpt.InitEncrypto(&password, config.C.Base.Crypto)
 	if encryptor == nil {
 		log.FMTLog(log.LOGERROR, "unsupport encrypto:", config.C.Base.Crypto)
 		os.Exit(0)
 	}
+	/*
+	 * 服务启动
+	 */
 	listener, listenErr := net.ListenTCP("tcp", addr)
 	if listenErr != nil {
 		log.FMTLog(log.LOGERROR, listenErr)
