@@ -5,6 +5,7 @@ import (
 	"github/wziww/medusa/config"
 	"github/wziww/medusa/encrpt"
 	"github/wziww/medusa/log"
+	"github/wziww/medusa/stream"
 	"net"
 	"os"
 	"strconv"
@@ -16,6 +17,9 @@ func main() {
 		log.FMTLog(log.LOGERROR, resoveErr)
 		os.Exit(0)
 	}
+	config.C.Base.Client = true
+	log.FMTLog(log.LOGINFO, "client start")
+	stream.APIServerInit()
 	password := []byte(config.C.Base.Password)
 	encryptor := encrpt.InitEncrypto(&password, config.C.Base.Crypto)
 	if encryptor == nil {

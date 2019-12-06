@@ -11,19 +11,30 @@ import (
 	"time"
 )
 
-func init() {
+// APIServerInit api server start
+func APIServerInit() {
 	go func() {
-		log.FMTLog(log.LOGINFO, "api server enable:", config.C.Base.API.Enable)
-		if !config.C.Base.API.Enable {
+		var enable bool
+		var port int
+		switch config.C.Base.Client {
+		case true:
+			enable = config.C.Client.API.Enable
+			port = config.C.Client.API.Port
+		case false:
+			enable = config.C.Server.API.Enable
+			port = config.C.Server.API.Port
+		}
+		log.FMTLog(log.LOGINFO, "api server enable:", enable)
+		if !enable {
 			return
 		}
 		server := &http.Server{
 			Addr: func() string {
 				addr := "0.0.0.0:"
-				if config.C.Base.API.Port == 0 {
+				if port == 0 {
 					addr += "8083"
 				} else {
-					addr += strconv.Itoa(config.C.Base.API.Port)
+					addr += strconv.Itoa(port)
 				}
 				return addr
 			}(),
@@ -43,6 +54,7 @@ func init() {
 			w.Write(j)
 			return
 		})
+		log.FMTLog(log.LOGINFO, "api service start listen at", server.Addr)
 		err := server.ListenAndServe()
 		if err != nil {
 			log.FMTLog(log.LOGERROR, err)

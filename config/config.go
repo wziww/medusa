@@ -23,7 +23,7 @@ type Config struct {
 type Base struct {
 	Password string `json:"password"`
 	Crypto   string `json:"crypto"`
-	API      API    `json:"api"`
+	Client   bool
 }
 
 // API 相关配置
@@ -36,6 +36,7 @@ type API struct {
 type Server struct {
 	// Port 默认 0 ，采用随机端口，客户端需要自行更新 port
 	Port int `json:"port"`
+	API  API `json:"api"`
 }
 
 // Log 日志相关配置
@@ -49,6 +50,7 @@ type Client struct {
 	RemoteAddress string `json:"remoteAddress"`
 	// Port 默认 0 ，采用随机端口，客户端需要自行更新 port
 	Port int `json:"port"`
+	API  API `json:"api"`
 }
 
 func init() {
