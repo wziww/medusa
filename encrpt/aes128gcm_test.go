@@ -1,7 +1,7 @@
 package encrpt
 
 import (
-	"github/wziww/encrpt"
+	"github/wziww/medusa/encrpt"
 	"testing"
 )
 
