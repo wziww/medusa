@@ -4,6 +4,9 @@ import (
 	"sync"
 )
 
+/**
+ *	流量统计相关数据操作必须通过本模块提供的方法进行
+ */
 var (
 	// Counter 总流量统计
 	Counter *counter = &counter{}
