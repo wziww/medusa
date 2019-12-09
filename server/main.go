@@ -5,6 +5,7 @@ import (
 	"github/wziww/medusa/config"
 	"github/wziww/medusa/encrpt"
 	"github/wziww/medusa/log"
+	"github/wziww/medusa/stream"
 	"net"
 	"os"
 	"strconv"
@@ -16,12 +17,24 @@ func main() {
 		log.FMTLog(log.LOGERROR, resoveErr)
 		os.Exit(0)
 	}
+	config.C.Base.Client = false
+	log.FMTLog(log.LOGINFO, "server start")
+	/*
+	 * api 服务初始化
+	 */
+	stream.APIServerInit()
+	/*
+	 * 加密器初始化
+	 */
 	password := []byte(config.C.Base.Password)
 	encryptor := encrpt.InitEncrypto(&password, config.C.Base.Crypto)
 	if encryptor == nil {
 		log.FMTLog(log.LOGERROR, "unsupport encrypto:", config.C.Base.Crypto)
 		os.Exit(0)
 	}
+	/*
+	 * 服务启动
+	 */
 	listener, listenErr := net.ListenTCP("tcp", addr)
 	if listenErr != nil {
 		log.FMTLog(log.LOGERROR, listenErr)

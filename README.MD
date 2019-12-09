@@ -1,5 +1,5 @@
 ### 配置示例
-```js
+```javascript
 {
   "base": {
     // 32 位密码
@@ -9,13 +9,21 @@
   },
   // 服务端配置
   "server": {
-    "port": 8080
+    "port": 8080,
+    "api": {
+      "port": 8082, // 监听地址
+      "enable": true // 是否启用
+    }
   },
   // 客户端配置
   "client": {
     "port": 8081,
     // 服务端地址
-    "remoteAddress": "0.0.0.0:8080"
+    "remoteAddress": "0.0.0.0:8080",
+    "api": {
+      "port": 8083, // 监听地址
+      "enable": true // 是否启用
+    }
   },
   // 日志配置，多级别
   "log": {
