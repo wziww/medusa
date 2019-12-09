@@ -1,5 +1,9 @@
 vendor
-*debug*
 makefile
+
+# ide workspace config
 .idea
 .vscode
+
+# target
+*debug*
