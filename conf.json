@@ -4,11 +4,19 @@
     "crypto": "aes-128-gcm"
   },
   "server": {
-    "port": 8080
+    "port": 8080,
+    "api": {
+      "port": 8082,
+      "enable": true
+    }
   },
   "client": {
     "port": 8081,
-    "remoteAddress": "0.0.0.0:8080"
+    "remoteAddress": "0.0.0.0:8080",
+    "api": {
+      "port": 8083,
+      "enable": true
+    }
   },
   "log": {
     "logLevel": [

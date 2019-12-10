@@ -5,10 +5,29 @@ import (
 	"errors"
 	"github/wziww/medusa/encrpt"
 	"github/wziww/medusa/log"
+	"github/wziww/medusa/stream"
 	"io"
+	"sync"
+	"sync/atomic"
 )
 
 var bufSize int = 1024
+
+var bp sync.Pool
+
+func init() {
+	bp.New = func() interface{} {
+		return make([]byte, 8)
+	}
+}
+
+func btsPoolGet() []byte {
+	return bp.Get().([]byte)
+}
+
+func btsPoolPut(b []byte) {
+	bp.Put(b)
+}
 
 // TCPConn ...
 type TCPConn struct {
@@ -22,11 +41,18 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	//   +----+-----+-------+------+----------+----------+
 	//   |LEN | 								DATA 										 |
 	//   +----+-----+-------+------+----------+----------+
-	//   | 4  | 								 x  									   |
+	//   | 8  | 								 x  									   |
 	//   +----+-----+-------+------+----------+----------+
 	// */
 	var l int64
-	binary.Read(conn, binary.BigEndian, &l)
+	b := btsPoolGet()
+	io.ReadFull(conn, b)
+	l = int64(binary.BigEndian.Uint64(b))
+	btsPoolPut(b)
+	atomic.AddUint64(stream.FlowIn, uint64(l))
+	if l <= 0 {
+		return
+	}
 	data := make([]byte, l)
 	n, err = conn.Read(data)
 	if err != nil {
@@ -49,10 +75,11 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 		//   +----+-----+-------+------+----------+----------+
 		//   |LEN | 								DATA 										 |
 		//   +----+-----+-------+------+----------+----------+
-		//   | 4  | 								 x  									   |
+		//   | 8  | 								 x  									   |
 		//   +----+-----+-------+------+----------+----------+
 		// */
 		var l int64 = int64(len(buf))
+		atomic.AddUint64(stream.FlowOut, uint64(l))
 		binary.Write(conn, binary.BigEndian, l)
 		return conn.Write(buf)
 	}
