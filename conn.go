@@ -30,6 +30,9 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	var l int64
 	binary.Read(conn, binary.BigEndian, &l)
 	atomic.AddUint64(stream.FlowIn, uint64(l))
+	if l <= 0 {
+		return
+	}
 	data := make([]byte, l)
 	n, err = conn.Read(data)
 	if err != nil {
