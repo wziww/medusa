@@ -53,7 +53,8 @@ type Client struct {
 	API  API `json:"api"`
 }
 
-func init() {
+// Init 日志初始化
+func Init() {
 	/**
 	 * 文件加载流程 => 使用指定文件
 	 * 默认文件：config 文件夹下 conf.json 或者项目根目录下 conf.json
