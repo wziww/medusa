@@ -2,7 +2,7 @@ package encrpt
 
 import (
 	"testing"
-	"github/wziww/medusa/config"
+	// "github/wziww/medusa/config"
 )
 
 var password []byte = []byte("AES256Key-32Characters1234567890")
@@ -10,10 +10,6 @@ var aesobj *Aes128gcm = &Aes128gcm{
 	Password: &password,
 }
 
-func TestMain(m *testing.M) {
-	config.Init()
-	m.Run()
-}
 func TestString(t *testing.T) {
 	s := "hellow world!"
 	sd := aesobj.Encode([]byte(s))
@@ -22,6 +18,7 @@ func TestString(t *testing.T) {
 		t.Fatal(s, "!=", string(s2), "fail to encode and decode")
 	}
 }
+
 func TestBytes(t *testing.T) {
 	s := []byte{5, 1, 0, 1, 3, 4, 5, 7, 4, 3, 2, 2, 3, 5, 6, 0, 0, 0, 0, 0, 0, 9}
 	sd := aesobj.Encode([]byte(s))
@@ -33,6 +30,7 @@ func TestBytes(t *testing.T) {
 		}
 	}
 }
+
 func TestDecodeErrorData(t *testing.T) {
 	s := []byte{141, 157, 142, 107, 1, 29, 217, 71, 14, 30, 214, 145, 91, 119,
 		207, 69, 127, 232, 75, 185, 1, 172, 169, 27, 212, 174, 150, 72, 192, 10,
@@ -100,6 +98,7 @@ func TestDecodeErrorData(t *testing.T) {
 		t.Fatal("test decode error data fail")
 	}
 }
+
 func TestDecodeData(t *testing.T) {
 	s := []byte{141, 157, 142, 107, 1, 29, 217, 71, 14, 30, 214, 31, 157, 186, 51, 226,
 		104, 44, 184, 43, 169, 68, 113, 84, 100, 179, 85, 217, 70, 166, 199, 22, 107, 96,

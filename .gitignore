@@ -1,3 +1,8 @@
 vendor
 *debug*
+<<<<<<< HEAD
 makefile
+=======
+.idea
+.vscode
+>>>>>>> add: aes & padding
