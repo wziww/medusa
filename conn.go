@@ -51,7 +51,7 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	io.ReadFull(conn, b)
 	l = int64(binary.BigEndian.Uint64(b))
 	btsPoolPut(b)
-	atomic.AddUint64(stream.FlowIn, uint64(l+8))
+	atomic.AddUint64(stream.FlowIn, uint64(l))
 	if l <= 0 {
 		return
 	}
@@ -81,7 +81,7 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 		//   +----+-----+-------+------+----------+----------+
 		// */
 		var l int64 = int64(len(buf))
-		atomic.AddUint64(stream.FlowOut, uint64(l+8))
+		atomic.AddUint64(stream.FlowOut, uint64(l))
 		binary.Write(conn, binary.BigEndian, l)
 		return conn.Write(buf)
 	}
