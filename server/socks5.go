@@ -121,7 +121,12 @@ func handleConn(conn *medusa.TCPConn) {
 	// 进行转发
 	// 从 localUser 读取数据发送到 dstServer
 	go func() {
-		err := conn.DecodeCopy(dstServer)
+		err := conn.DecodeCopy(&medusa.TCPConn{
+			L:               dstServer.LocalAddr().String(),
+			R:               dstServer.RemoteAddr().String(),
+			ReadWriteCloser: dstServer,
+			Encryptor:       conn.Encryptor,
+		}) //
 		if err != nil {
 			// 在 copy 的过程中可能会存在网络超时等 error 被 return，只要有一个发生了错误就退出本次工作
 			conn.Close()
@@ -130,6 +135,8 @@ func handleConn(conn *medusa.TCPConn) {
 	}()
 	// 从 dstServer 读取数据发送到 localUser，这里因为处在翻墙阶段出现网络错误的概率更大
 	(&medusa.TCPConn{
+		L:               dstServer.LocalAddr().String(),
+		R:               dstServer.RemoteAddr().String(),
 		ReadWriteCloser: dstServer,
 		Encryptor:       conn.Encryptor,
 	}).EncodeCopy(conn)

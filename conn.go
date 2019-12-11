@@ -31,6 +31,8 @@ func btsPoolPut(b []byte) {
 
 // TCPConn ...
 type TCPConn struct {
+	L string // LocalAddr
+	R string
 	io.ReadWriteCloser
 	Encryptor encrpt.Encryptor
 }
@@ -49,7 +51,7 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	io.ReadFull(conn, b)
 	l = int64(binary.BigEndian.Uint64(b))
 	btsPoolPut(b)
-	atomic.AddUint64(stream.FlowIn, uint64(l))
+	atomic.AddUint64(stream.FlowIn, uint64(l+8))
 	if l <= 0 {
 		return
 	}
@@ -79,7 +81,7 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 		//   +----+-----+-------+------+----------+----------+
 		// */
 		var l int64 = int64(len(buf))
-		atomic.AddUint64(stream.FlowOut, uint64(l))
+		atomic.AddUint64(stream.FlowOut, uint64(l+8))
 		binary.Write(conn, binary.BigEndian, l)
 		return conn.Write(buf)
 	}
@@ -87,7 +89,7 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 }
 
 // DecodeCopy 从src中源源不断的读取加密后的数据解密后写入到dst，直到src中没有数据可以再读取
-func (conn *TCPConn) DecodeCopy(dst io.Writer) error {
+func (conn *TCPConn) DecodeCopy(dst *TCPConn) error {
 	for {
 		readCount, buf, errRead := conn.DecodeRead()
 		if errRead != nil {
@@ -101,6 +103,7 @@ func (conn *TCPConn) DecodeCopy(dst io.Writer) error {
 			if errWrite != nil {
 				return errWrite
 			}
+			stream.Counter.FlowOutIncr(conn.R, uint64(writeCount))
 			if readCount != writeCount {
 				return io.ErrShortWrite
 			}
@@ -109,7 +112,7 @@ func (conn *TCPConn) DecodeCopy(dst io.Writer) error {
 }
 
 // EncodeCopy 从src中源源不断的读取原数据加密后写入到dst，直到src中没有数据可以再读取
-func (conn *TCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
+func (conn *TCPConn) EncodeCopy(dst *TCPConn) error {
 	buf := make([]byte, bufSize)
 	for {
 		readCount, errRead := conn.Read(buf)
@@ -121,12 +124,15 @@ func (conn *TCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
 		}
 		if readCount > 0 {
 			writeCount, errWrite := (&TCPConn{
+				L:               dst.L,
+				R:               dst.R,
 				ReadWriteCloser: dst,
 				Encryptor:       conn.Encryptor,
 			}).EncodeWrite(buf[:readCount])
 			if errWrite != nil {
 				return errWrite
 			}
+			stream.Counter.FlowInIncr(dst.R, uint64(writeCount))
 			if readCount != writeCount && writeCount == 0 {
 				return io.ErrShortWrite
 			}

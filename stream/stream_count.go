@@ -1,7 +1,9 @@
 package stream
 
 import (
+	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 /**
@@ -21,17 +23,42 @@ type count struct {
 	FlowOut uint64
 }
 type counter struct {
-	Data map[string]*count
+	Data map[string]*count `json:"Data"`
 	lock sync.RWMutex
 }
 
 func init() {
+	Counter.Data = make(map[string]*count)
 }
 
-// Set 流量设置
-func (c *counter) Set(key string, value uint64) {
+// FlowInIncr 入流量增加
+func (c *counter) FlowInIncr(key string, value uint64) {
+	key = strings.Split(key, ":")[0]
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if _, ok := c.Data[key]; ok {
+		atomic.AddUint64(&c.Data[key].FlowIn, value)
+	} else {
+		c.Data[key] = &count{
+			FlowIn:  0,
+			FlowOut: 0,
+		}
+	}
+}
+
+// FlowOutIncr 出流量增加
+func (c *counter) FlowOutIncr(key string, value uint64) {
+	key = strings.Split(key, ":")[0]
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if _, ok := c.Data[key]; ok {
+		atomic.AddUint64(&c.Data[key].FlowOut, value)
+	} else {
+		c.Data[key] = &count{
+			FlowIn:  0,
+			FlowOut: 0,
+		}
+	}
 }
 
 // Get 流量获取
@@ -39,4 +66,13 @@ func (c *counter) Get(key string) uint64 {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return 0
+}
+func (c *counter) GetAll() map[string]count {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	m := make(map[string]count)
+	for k, v := range c.Data {
+		m[k] = *v
+	}
+	return m
 }
