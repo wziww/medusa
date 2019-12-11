@@ -1,15 +1,19 @@
 package encrpt
 
 import (
-	"github/wziww/medusa/encrpt"
 	"testing"
+	"github/wziww/medusa/config"
 )
 
 var password []byte = []byte("AES256Key-32Characters1234567890")
-var aesobj *encrpt.Aes128gcm = &encrpt.Aes128gcm{
+var aesobj *Aes128gcm = &Aes128gcm{
 	Password: &password,
 }
 
+func TestMain(m *testing.M) {
+	config.Init()
+	m.Run()
+}
 func TestString(t *testing.T) {
 	s := "hellow world!"
 	sd := aesobj.Encode([]byte(s))
