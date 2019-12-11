@@ -13,6 +13,10 @@ func InitEncrypto(password *[]byte, method string) Encryptor {
 		return &Aes128gcm{
 			Password: password,
 		}
+	case "aes-128-cfb":
+		return &AesCfb{password}
+	case "aes-128-ctr":
+		return &AesCtr{password}
 	}
 	return nil
 }

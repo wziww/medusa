@@ -9,41 +9,41 @@ import (
 	"io"
 )
 
-type aesCfb struct {
-	password *[]byte
-	iv       *[]byte
+// AesCfb ...
+type AesCfb struct {
+	Password *[]byte
 }
 
-// var _ Encryptor = (*aesCfb)(nil)
+var _ Encryptor = (*AesCfb)(nil)
 
 // NewAesCfb constructor...
-func NewAesCfb(password *[]byte, iv *[]byte) *aesCfb {
-	if len(*password) != 16 && len(*password) != 24 && len(*password) != 32 {
-		log.FMTLog(log.LOGERROR, errors.New("aes_ctr: password长度必须为16、24或32位"))
-		return nil
-	}
-	if len(*iv) != 16 {
-		log.FMTLog(log.LOGERROR, errors.New("aes_ctr: iv长度必须为16位"))
-		return nil
-	}
-	ctr := &aesCfb{password, iv}
-	return ctr
-}
+// func NewAesCfb(password *[]byte, iv *[]byte) *aesCfb {
+// 	if len(*password) != 16 && len(*password) != 24 && len(*password) != 32 {
+// 		log.FMTLog(log.LOGERROR, errors.New("aes_ctr: password长度必须为16、24或32位"))
+// 		return nil
+// 	}
+// 	if len(*iv) != 16 {
+// 		log.FMTLog(log.LOGERROR, errors.New("aes_ctr: iv长度必须为16位"))
+// 		return nil
+// 	}
+// 	ctr := &aesCfb{password, iv}
+// 	return ctr
+// }
 
 // Decode ...
-func (st *aesCfb) Decode(buf []byte) []byte {
+func (st *AesCfb) Decode(cipherBuf []byte) []byte {
 
-	block, err := aes.NewCipher(*st.password)
+	block, err := aes.NewCipher(*st.Password)
 	if err != nil {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
 	}
-	if len(buf) < aes.BlockSize {
+	if len(cipherBuf) < aes.BlockSize {
 		log.FMTLog(log.LOGERROR, errors.New("aes_cfb: ciphertext too short"))
 		return nil
 	}
-	iv := buf[:aes.BlockSize]
-	buf = buf[aes.BlockSize:]
+	iv := cipherBuf[:aes.BlockSize]
+	var buf = cipherBuf[aes.BlockSize:]
 	stream := cipher.NewCFBDecrypter(block, iv)
 	stream.XORKeyStream(buf, buf)
 
@@ -51,15 +51,14 @@ func (st *aesCfb) Decode(buf []byte) []byte {
 }
 
 // Encode ...
-func (st *aesCfb) Encode(buf []byte) []byte {
-	block, err := aes.NewCipher(*st.password)
+func (st *AesCfb) Encode(plainBuf []byte) []byte {
+	block, err := aes.NewCipher(*st.Password)
 	if err != nil {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
 	}
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
-	ciphertext := make([]byte, aes.BlockSize+len(buf))
+	
+	ciphertext := make([]byte, aes.BlockSize+len(plainBuf))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		log.FMTLog(log.LOGERROR, err)
@@ -67,6 +66,6 @@ func (st *aesCfb) Encode(buf []byte) []byte {
 	}
 
 	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], buf)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plainBuf)
 	return ciphertext
 }
