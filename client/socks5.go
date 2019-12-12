@@ -25,6 +25,8 @@ func handleConn(userConn *medusa.TCPConn) {
 	}
 	defer proxyServer.Close()
 	proxyServerTCP := &medusa.TCPConn{
+		L:               proxyServer.LocalAddr().String(),
+		R:               proxyServer.RemoteAddr().String(),
 		ReadWriteCloser: proxyServer,
 		Encryptor:       userConn.Encryptor,
 	}
@@ -43,5 +45,5 @@ func handleConn(userConn *medusa.TCPConn) {
 		}
 	}()
 	// 从 localUser 发送数据发送到 proxyServer，这里因为处在翻墙阶段出现网络错误的概率更大
-	userConn.EncodeCopy(proxyServer)
+	userConn.EncodeCopy(proxyServerTCP)
 }
