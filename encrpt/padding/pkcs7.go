@@ -3,7 +3,7 @@ package encrpt
 import (
 	"bytes"
 	"errors"
-	"strconv"
+	// "strconv"
 )
 
 // The value of each added byte is the number of bytes that are added, i.e. N bytes, each of value N are added.
@@ -13,30 +13,30 @@ import (
 // ... | DD DD DD DD DD DD DD DD | DD DD DD DD 04 04 04 04 |
 
 // PKCS7Padding ...
-func PKCS7Padding(cipherData []byte, blockSize int) ([]byte, error) {
-	if blockSize < 0 || blockSize > 256 {
-		return nil, errors.New("pkcs7: Invalid block size " + strconv.Itoa(blockSize))
-	}
-	padLen := 16 - len(cipherData)%blockSize
+func PKCS7Padding(cipherData []byte, blockSize int) []byte {
+	// if blockSize < 0 || blockSize > 256 {
+	// 	return nil, errors.New("pkcs7: Invalid block size " + strconv.Itoa(blockSize))
+	// }
+	padLen := blockSize - len(cipherData)%blockSize
 	padding := bytes.Repeat([]byte{byte(padLen)}, padLen)
-	return append(cipherData, padding...), nil
+	return append(cipherData, padding...)
 
 }
 
 // PKCS7UnPadding ...
 func PKCS7UnPadding(rawData []byte, blockSize int) ([]byte, error) {
-	length := len(rawData)
-	if length == 0 {
-		return nil, errors.New("pkcs7: raw data is empty")
+	rawLen := len(rawData)
+	if rawLen == 0 {
+		return nil, errors.New("pkcs7: Raw data is empty")
 	}
-	if length%blockSize != 0 {
-		return nil, errors.New("pkcs7: raw data is not block-aligned")
+	if rawLen%blockSize != 0 {
+		return nil, errors.New("pkcs7: Raw data is not block-aligned")
 	}
-	padLen := int(rawData[length-1])
+	padLen := int(rawData[rawLen-1])
 	ref := bytes.Repeat([]byte{byte(padLen)}, padLen)
 	if padLen > blockSize || padLen == 0 || !bytes.HasSuffix(rawData, ref) {
-		return nil, errors.New("pkcs7: invalid padding")
+		return nil, errors.New("pkcs7: Invalid padding")
 	}
-	return rawData[:length-padLen], nil
+	return rawData[:rawLen-padLen], nil
 
 }
