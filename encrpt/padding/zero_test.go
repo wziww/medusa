@@ -1,4 +1,4 @@
-package encrpt
+package padding
 
 import "testing"
 

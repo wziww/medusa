@@ -1,4 +1,4 @@
-package encrpt
+package pdding
 
 import (
 	"bytes"

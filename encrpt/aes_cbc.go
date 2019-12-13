@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"errors"
+	"github/wziww/medusa/encrpt/padding"
 	"github/wziww/medusa/log"
 	"io"
 )
@@ -37,6 +38,7 @@ func (st *AesCbc) Decode(cipherBuf []byte) []byte {
 
 	blockMode := cipher.NewCBCDecrypter(block, iv)
 	blockMode.CryptBlocks(cipherBuf, cipherBuf)
+	cipherBuf,_ = padding.PKCS7UnPadding(cipherBuf, aes.BlockSize)
 	return cipherBuf
 }
 
@@ -46,6 +48,7 @@ func (st *AesCbc) Encode(plainBuf []byte) []byte {
 		log.FMTLog(log.LOGERROR, errors.New("aes_cbc: plainBuf is not a multiple of the block size"))
 		return nil
 	}
+	plainBuf = padding.PKCS7Padding(plainBuf, aes.BlockSize)
 	block, err := aes.NewCipher(*st.Password)
 	if err != nil {
 		log.FMTLog(log.LOGERROR, err)
@@ -54,7 +57,7 @@ func (st *AesCbc) Encode(plainBuf []byte) []byte {
 	cipherBuf := make([]byte, aes.BlockSize+len(plainBuf))
 	iv := cipherBuf[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
+		log.FMTLog(log.LOGERROR, err)
 	}
 	blockMode := cipher.NewCBCEncrypter(block, iv)
 	blockMode.CryptBlocks(cipherBuf[aes.BlockSize:], plainBuf)

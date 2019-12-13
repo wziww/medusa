@@ -24,6 +24,6 @@
       "LOGERROR",
       "LOGDEBUG"
     ],
-    "logPath": "stdout"
+    "logPath": "C:\\Users\\Administrator\\Desktop\\log"
   }
 }
