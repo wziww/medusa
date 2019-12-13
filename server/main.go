@@ -50,6 +50,8 @@ func main() {
 		// localConn被关闭时直接清除所有数据 不管没有发送的数据
 		localConn.SetLinger(0)
 		go handleConn(&medusa.TCPConn{
+			L:               localConn.LocalAddr().String(),
+			R:               localConn.RemoteAddr().String(),
 			ReadWriteCloser: localConn,
 			Encryptor:       encryptor,
 		})

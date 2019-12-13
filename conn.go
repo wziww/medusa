@@ -11,21 +11,22 @@ import (
 	"sync/atomic"
 )
 
-var bufSize int = 1024
+var bufSize int64 = 1 << 10 //1kb
 
 var bp sync.Pool
 
 func init() {
 	bp.New = func() interface{} {
-		return make([]byte, 8)
+		b := make([]byte, bufSize)
+		return &b
 	}
 }
 
-func btsPoolGet() []byte {
-	return bp.Get().([]byte)
+func btsPoolGet() *[]byte {
+	return bp.Get().(*[]byte)
 }
 
-func btsPoolPut(b []byte) {
+func btsPoolPut(b *[]byte) {
 	bp.Put(b)
 }
 
@@ -47,24 +48,69 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	//   +----+-----+-------+------+----------+----------+
 	// */
 	var l int64
+	var offset int64
+	// binary.Read(conn, binary.BigEndian, &l)
 	b := btsPoolGet()
-	io.ReadFull(conn, b)
-	l = int64(binary.BigEndian.Uint64(b))
-	btsPoolPut(b)
-	atomic.AddUint64(stream.FlowIn, uint64(l))
-	if l <= 0 {
-		return
-	}
-	data := make([]byte, l)
-	n, err = conn.Read(data)
+	defer btsPoolPut(b)
+	var readN int
+	readN, err = conn.Read(*b)
 	if err != nil {
 		log.FMTLog(log.LOGDEBUG, err)
 		return
 	}
-	if res := conn.Encryptor.Decode(data[:n]); res != nil {
-		buf = res
-		n = len(res)
+	if readN < 8 {
+		// 非法协议
 		return
+	}
+	l = int64(binary.BigEndian.Uint64((*b)[:8]))
+	atomic.AddUint64(stream.FlowIn, uint64(l))
+	offset = 8
+	if l <= 0 {
+		return
+	}
+	// /**
+	//   +----+-----+-------+------+----------+----------+
+	//   |LEN | 								DATA 										 |
+	//   +----+-----+-------+------+----------+----------+
+	//   | 8  | 					   readN - 8								   |
+	//   +----+-----+-------+------+----------+----------+
+	//   +----+-----+-------+------+----------+----------+
+	//   |         							DATA 										 |
+	//   +----+-----+-------+------+----------+----------+
+	//   |    							l - readN + 8 		 				   |
+	//   +----+-----+-------+------+----------+----------+
+	//   +----+-----+-------+------+----------+----------+
+	//   |         						DATAALL										 |
+	//   +----+-----+-------+------+----------+----------+
+	//   |    							l             		 				   |
+	//   +----+-----+-------+------+----------+----------+
+	//
+	// */
+	if int64(readN)-offset >= l { // 全都处理完成
+		if res := conn.Encryptor.Decode((*b)[offset:readN]); res != nil {
+			buf = res
+			n = len(res)
+			return
+		}
+	} else {
+		data := make([]byte, l-int64(readN)+8)
+		n, err = conn.Read(data)
+		if err != nil {
+			log.FMTLog(log.LOGDEBUG, err)
+			return
+		}
+		dataAll := make([]byte, l)
+		for i := 8; i < readN; i++ {
+			dataAll[i-8] = (*b)[i]
+		}
+		for i := range data {
+			dataAll[readN+i-8] = data[i]
+		}
+		if res := conn.Encryptor.Decode(dataAll); res != nil {
+			buf = res
+			n = len(res)
+			return
+		}
 	}
 	return 0, nil, errors.New("DecodeRead error")
 }
