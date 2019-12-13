@@ -4,24 +4,25 @@ import (
 	"testing"
 )
 
-var passwordCtr []byte = []byte("AES256Key-32Characters1234567890")
-var aesobjCtr *AesCtr = &AesCtr{
-	Password: &passwordCtr,
+var passwordCbc []byte = []byte("AES256Key-32Characters1234567890")
+var aesobjCbc *AesCbc = &AesCbc{
+	Password: &passwordCbc,
 }
 
-func TestStringCtr(t *testing.T) {
-	s := "hello world!"
-	sd := aesobj.Encode([]byte(s))
-	s2 := aesobj.Decode(sd)
+func TestStringCbc(t *testing.T) {
+	s := "hello world haha"
+	sd := aesobjCbc.Encode([]byte(s))
+	s2 := aesobjCbc.Decode(sd)
 	if s != string(s2) {
 		t.Fatal(s, "!=", string(s2), "fail to encode and decode")
 	}
 }
 
-func TestBytesCtr(t *testing.T) {
+func TestBytesCbc(t *testing.T) {
 	s := []byte{5, 1, 0, 1, 3, 4, 5, 7, 4, 3, 2, 2, 3, 5, 6, 0, 0, 0, 0, 0, 0, 9}
-	sd := aesobj.Encode([]byte(s))
-	s2 := aesobj.Decode(sd)
+	// s:=make([]byte,256)
+	sd := aesobjCbc.Encode([]byte(s))
+	s2 := aesobjCbc.Decode(sd)
 	for i := range s {
 		if s[i] != s2[i] {
 			t.Fatal(s, "!=", string(s2), "fail to encode and decode")
@@ -30,7 +31,7 @@ func TestBytesCtr(t *testing.T) {
 	}
 }
 
-func TestDecodeErrorDataCtr(t *testing.T) {
+func TestDecodeErrorDataCbc(t *testing.T) {
 	s := []byte{141, 157, 142, 107, 1, 29, 217, 71, 14, 30, 214, 145, 91, 119,
 		207, 69, 127, 232, 75, 185, 1, 172, 169, 27, 212, 174, 150, 72, 192, 10,
 		133, 243, 172, 169, 190, 116, 46, 28, 12, 70, 132, 35, 28, 202, 122, 131,
@@ -92,13 +93,13 @@ func TestDecodeErrorDataCtr(t *testing.T) {
 		175, 69, 80, 139, 209, 200, 59, 172, 2, 4, 121, 47, 24, 102, 142, 236, 116, 210,
 		101, 212, 31, 239, 80, 238, 217, 84, 78, 112, 4, 125, 17, 153, 43, 42, 123, 174,
 		191, 59, 52, 85, 176}
-	s2 := aesobjCtr.Decode(s)
+	s2 := aesobjCbc.Decode(s)
 	if len(s2) != 0 {
 		t.Fatal("test decode error data fail")
 	}
 }
 
-func TestDecodeDataCtr(t *testing.T) {
+func TestDecodeDataCbc(t *testing.T) {
 	s := []byte{141, 157, 142, 107, 1, 29, 217, 71, 14, 30, 214, 31, 157, 186, 51, 226,
 		104, 44, 184, 43, 169, 68, 113, 84, 100, 179, 85, 217, 70, 166, 199, 22, 107, 96,
 		206, 26, 237, 137, 27, 26, 150, 214, 13, 202, 88, 214, 9, 49, 0, 94, 67, 21, 216,
@@ -154,39 +155,39 @@ func TestDecodeDataCtr(t *testing.T) {
 		14, 98, 144, 76, 118, 224, 153, 156, 185, 125, 28, 30, 208, 146, 128, 46, 115, 209, 227,
 		31, 142, 131, 173, 97, 203, 163, 242, 89, 85, 225, 12, 152, 210, 230, 170, 82, 64, 9, 98, 53,
 		115, 211, 94, 180, 44, 25, 226, 244, 216, 109, 3, 136, 204, 90, 149}
-	s2 := aesobjCtr.Decode(s)
+	s2 := aesobjCbc.Decode(s)
 	if len(s2) == 0 {
 		t.Fatal("test decode data error")
 	}
 }
 
-func benchmarkAESCTREncode(b *testing.B, buf []byte) {
+func benchmarkAESCBCEncode(b *testing.B, buf []byte) {
 	b.SetBytes(int64(len(buf)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		aesobjCtr.Encode([]byte(buf))
+		aesobjCbc.Encode([]byte(buf))
 	}
 }
 
-func benchmarkAESCTRDecode(b *testing.B, buf []byte) {
+func benchmarkAESCBCDecode(b *testing.B, buf []byte) {
 	b.SetBytes(int64(len(buf)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		aesobjCtr.Decode(buf)
+		aesobjCbc.Decode(buf)
 	}
 }
 
-func BenchmarkAESCTREncode1K(b *testing.B) {
+func BenchmarkAESCBCEncode1K(b *testing.B) {
 	benchmarkAESCBCEncode(b, make([]byte, 1024))
 }
 
-func BenchmarkAESCTRDecode1K(b *testing.B) {
+func BenchmarkAESCBCDecode1K(b *testing.B) {
 	benchmarkAESCBCDecode(b, make([]byte, 1024))
 }
-func BenchmarkAESCTREncode10K(b *testing.B) {
+func BenchmarkAESCBCEncode10K(b *testing.B) {
 	benchmarkAESCBCEncode(b, make([]byte, 10*1024))
 }
 
-func BenchmarkAESCTRDecode10K(b *testing.B) {
+func BenchmarkAESCBCDecode10K(b *testing.B) {
 	benchmarkAESCBCDecode(b, make([]byte, 10*1024))
 }

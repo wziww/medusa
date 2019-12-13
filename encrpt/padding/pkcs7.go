@@ -1,9 +1,8 @@
-package encrpt
+package  padding
 
 import (
 	"bytes"
 	"errors"
-	// "strconv"
 )
 
 // The value of each added byte is the number of bytes that are added, i.e. N bytes, each of value N are added.

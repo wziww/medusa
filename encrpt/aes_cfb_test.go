@@ -1,7 +1,6 @@
 package encrpt
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -13,9 +12,7 @@ var aesobjCfb *AesCfb = &AesCfb{
 func TestStringCfb(t *testing.T) {
 	s := "hello world!"
 	sd := aesobjCfb.Encode([]byte(s))
-	fmt.Printf("sd---%s\n", sd)
 	s2 := aesobjCfb.Decode(sd)
-	fmt.Printf("s2---%s\n", s2)
 	if s != string(s2) {
 		t.Fatal(s, "!=", string(s2), "fail to encode and decode")
 	}
@@ -31,4 +28,35 @@ func TestBytesCfb(t *testing.T) {
 			return
 		}
 	}
+}
+
+func benchmarkAESCFBEncode(b *testing.B, buf []byte) {
+	b.SetBytes(int64(len(buf)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		aesobjCfb.Encode([]byte(buf))
+	}
+}
+
+func benchmarkAESCFBDecode(b *testing.B, buf []byte) {
+	b.SetBytes(int64(len(buf)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		aesobjCfb.Decode(buf)
+	}
+}
+
+func BenchmarkAESCFBEncode1K(b *testing.B) {
+	benchmarkAESCFBEncode(b, make([]byte, 1024))
+}
+
+func BenchmarkAESCFBDecode1K(b *testing.B) {
+	benchmarkAESCFBDecode(b, make([]byte, 1024))
+}
+func BenchmarkAESCFBEncode10K(b *testing.B) {
+	benchmarkAESCFBEncode(b, make([]byte, 10*1024))
+}
+
+func BenchmarkAESCFBDecode10K(b *testing.B) {
+	benchmarkAESCFBDecode(b, make([]byte, 10*1024))
 }
