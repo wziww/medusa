@@ -1,6 +1,7 @@
 package medusa
 
 import (
+	"bufio"
 	"encoding/binary"
 	"errors"
 	"github/wziww/medusa/encrpt"
@@ -15,9 +16,11 @@ var bufSize int64 = 1 << 10 //1kb
 
 var bp sync.Pool
 
+const maxConsecutiveEmptyReads = 100
+
 func init() {
 	bp.New = func() interface{} {
-		b := make([]byte, bufSize)
+		b := make([]byte, 8)
 		return &b
 	}
 }
@@ -34,7 +37,9 @@ func btsPoolPut(b *[]byte) {
 type TCPConn struct {
 	L string // LocalAddr
 	R string
-	io.ReadWriteCloser
+	*bufio.Reader
+	io.Closer
+	io.Writer
 	Encryptor encrpt.Encryptor
 }
 
@@ -48,7 +53,6 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	//   +----+-----+-------+------+----------+----------+
 	// */
 	var l int64
-	var offset int64
 	// binary.Read(conn, binary.BigEndian, &l)
 	b := btsPoolGet()
 	defer btsPoolPut(b)
@@ -64,7 +68,6 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	}
 	l = int64(binary.BigEndian.Uint64((*b)[:8]))
 	atomic.AddUint64(stream.FlowIn, uint64(l))
-	offset = 8
 	if l <= 0 {
 		return
 	}
@@ -86,33 +89,25 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	//   +----+-----+-------+------+----------+----------+
 	//
 	// */
-	if int64(readN)-offset >= l { // 全都处理完成
-		if res := conn.Encryptor.Decode((*b)[offset:readN]); res != nil {
-			buf = res
-			n = len(res)
-			return
+	data := make([]byte, l)
+	var rm int
+	for i := maxConsecutiveEmptyReads; i > 0; i-- {
+		rn, _ := conn.Read(data[rm:])
+		if rn < 0 {
+			return 0, nil, errors.New("bufio: reader returned negative count from Read")
 		}
-	} else {
-		data := make([]byte, l-int64(readN)+8)
-		n, err = conn.Read(data)
-		if err != nil {
-			log.FMTLog(log.LOGDEBUG, err)
-			return
-		}
-		dataAll := make([]byte, l)
-		for i := 8; i < readN; i++ {
-			dataAll[i-8] = (*b)[i]
-		}
-		for i := range data {
-			dataAll[readN+i-8] = data[i]
-		}
-		if res := conn.Encryptor.Decode(dataAll); res != nil {
-			buf = res
-			n = len(res)
-			return
+		rm += rn
+		if int64(rm) == l {
+			res := conn.Encryptor.Decode(data)
+			if res != nil {
+				buf = res
+				n = len(res)
+				return
+			}
+			return 0, nil, errors.New("DecodeRead error")
 		}
 	}
-	return 0, nil, errors.New("DecodeRead error")
+	return 0, nil, io.ErrNoProgress
 }
 
 //EncodeWrite ...
@@ -170,10 +165,12 @@ func (conn *TCPConn) EncodeCopy(dst *TCPConn) error {
 		}
 		if readCount > 0 {
 			writeCount, errWrite := (&TCPConn{
-				L:               dst.L,
-				R:               dst.R,
-				ReadWriteCloser: dst,
-				Encryptor:       conn.Encryptor,
+				L:         dst.L,
+				R:         dst.R,
+				Reader:    bufio.NewReader(dst),
+				Writer:    dst,
+				Closer:    dst,
+				Encryptor: conn.Encryptor,
 			}).EncodeWrite(buf[:readCount])
 			if errWrite != nil {
 				return errWrite

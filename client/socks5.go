@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"github/wziww/medusa"
 	"github/wziww/medusa/config"
 	"github/wziww/medusa/log"
@@ -25,10 +26,12 @@ func handleConn(userConn *medusa.TCPConn) {
 	}
 	defer proxyServer.Close()
 	proxyServerTCP := &medusa.TCPConn{
-		L:               proxyServer.LocalAddr().String(),
-		R:               proxyServer.RemoteAddr().String(),
-		ReadWriteCloser: proxyServer,
-		Encryptor:       userConn.Encryptor,
+		L:         proxyServer.LocalAddr().String(),
+		R:         proxyServer.RemoteAddr().String(),
+		Reader:    bufio.NewReader(proxyServer),
+		Closer:    proxyServer,
+		Writer:    proxyServer,
+		Encryptor: userConn.Encryptor,
 	}
 	// Conn被关闭时直接清除所有数据 不管没有发送的数据
 	proxyServer.SetLinger(0)
