@@ -3,10 +3,8 @@ package encrpt
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"encoding/hex"
 	"github/wziww/medusa/log"
-	"io"
 )
 
 // Aes128gcm ...
@@ -49,11 +47,6 @@ func (st *Aes128gcm) Encode(buf []byte) []byte {
 	}
 
 	nonce := make([]byte, 12)
-	if false {
-		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-			log.FMTLog(log.LOGERROR, err)
-		}
-	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {

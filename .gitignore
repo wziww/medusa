@@ -2,3 +2,4 @@ vendor
 *debug*
 .idea
 .vscode
+makefile

@@ -38,20 +38,11 @@ func APIServerInit() {
 				}
 				return addr
 			}(),
-			WriteTimeout: 5 * time.Second,
-			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 60 * time.Second,
+			ReadTimeout:  60 * time.Second,
 		}
 		http.HandleFunc("/v1/date", func(w http.ResponseWriter, r *http.Request) {
-			type res struct {
-				FlowIn  uint64
-				FlowOut uint64
-			}
-			d := &res{}
-			d.FlowIn = atomic.LoadUint64(FlowIn)
-			d.FlowOut = atomic.LoadUint64(FlowOut)
-			w.WriteHeader(200)
-			j, _ := json.Marshal(d)
-			w.Write(j)
+			v1Data(w, r)
 			return
 		})
 		log.FMTLog(log.LOGINFO, "api service start listen at", server.Addr)
@@ -61,4 +52,19 @@ func APIServerInit() {
 			os.Exit(1)
 		}
 	}()
+}
+
+func v1Data(w http.ResponseWriter, r *http.Request) {
+	type res struct {
+		FlowIn  uint64
+		FlowOut uint64
+		Counter interface{} `json:"counter"`
+	}
+	d := &res{}
+	d.FlowIn = atomic.LoadUint64(FlowIn)
+	d.FlowOut = atomic.LoadUint64(FlowOut)
+	d.Counter = Counter.GetAll()
+	w.WriteHeader(200)
+	j, _ := json.Marshal(d)
+	w.Write(j)
 }

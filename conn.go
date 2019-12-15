@@ -1,6 +1,7 @@
 package medusa
 
 import (
+	"bufio"
 	"encoding/binary"
 	"errors"
 	"github/wziww/medusa/encrpt"
@@ -11,27 +12,34 @@ import (
 	"sync/atomic"
 )
 
-var bufSize int = 1024
+var bufSize int64 = 1 << 10 //1kb
 
 var bp sync.Pool
 
+const maxConsecutiveEmptyReads = 100
+
 func init() {
 	bp.New = func() interface{} {
-		return make([]byte, 8)
+		b := make([]byte, 8)
+		return &b
 	}
 }
 
-func btsPoolGet() []byte {
-	return bp.Get().([]byte)
+func btsPoolGet() *[]byte {
+	return bp.Get().(*[]byte)
 }
 
-func btsPoolPut(b []byte) {
+func btsPoolPut(b *[]byte) {
 	bp.Put(b)
 }
 
 // TCPConn ...
 type TCPConn struct {
-	io.ReadWriteCloser
+	L string // LocalAddr
+	R string
+	*bufio.Reader
+	io.Closer
+	io.Writer
 	Encryptor encrpt.Encryptor
 }
 
@@ -45,26 +53,61 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 	//   +----+-----+-------+------+----------+----------+
 	// */
 	var l int64
+	// binary.Read(conn, binary.BigEndian, &l)
 	b := btsPoolGet()
-	io.ReadFull(conn, b)
-	l = int64(binary.BigEndian.Uint64(b))
-	btsPoolPut(b)
-	atomic.AddUint64(stream.FlowIn, uint64(l))
-	if l <= 0 {
-		return
-	}
-	data := make([]byte, l)
-	n, err = conn.Read(data)
+	defer btsPoolPut(b)
+	var readN int
+	readN, err = conn.Read(*b)
 	if err != nil {
 		log.FMTLog(log.LOGDEBUG, err)
 		return
 	}
-	if res := conn.Encryptor.Decode(data[:n]); res != nil {
-		buf = res
-		n = len(res)
+	if readN < 8 {
+		// 非法协议
 		return
 	}
-	return 0, nil, errors.New("DecodeRead error")
+	l = int64(binary.BigEndian.Uint64((*b)[:8]))
+	atomic.AddUint64(stream.FlowIn, uint64(l))
+	if l <= 0 {
+		return
+	}
+	// /**
+	//   +----+-----+-------+------+----------+----------+
+	//   |LEN | 								DATA 										 |
+	//   +----+-----+-------+------+----------+----------+
+	//   | 8  | 					   readN - 8								   |
+	//   +----+-----+-------+------+----------+----------+
+	//   +----+-----+-------+------+----------+----------+
+	//   |         							DATA 										 |
+	//   +----+-----+-------+------+----------+----------+
+	//   |    							l - readN + 8 		 				   |
+	//   +----+-----+-------+------+----------+----------+
+	//   +----+-----+-------+------+----------+----------+
+	//   |         						DATAALL										 |
+	//   +----+-----+-------+------+----------+----------+
+	//   |    							l             		 				   |
+	//   +----+-----+-------+------+----------+----------+
+	//
+	// */
+	data := make([]byte, l)
+	var rm int
+	for i := maxConsecutiveEmptyReads; i > 0; i-- {
+		rn, _ := conn.Read(data[rm:])
+		if rn < 0 {
+			return 0, nil, errors.New("bufio: reader returned negative count from Read")
+		}
+		rm += rn
+		if int64(rm) == l {
+			res := conn.Encryptor.Decode(data)
+			if res != nil {
+				buf = res
+				n = len(res)
+				return
+			}
+			return 0, nil, errors.New("DecodeRead error")
+		}
+	}
+	return 0, nil, io.ErrNoProgress
 }
 
 //EncodeWrite ...
@@ -87,7 +130,7 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 }
 
 // DecodeCopy 从src中源源不断的读取加密后的数据解密后写入到dst，直到src中没有数据可以再读取
-func (conn *TCPConn) DecodeCopy(dst io.Writer) error {
+func (conn *TCPConn) DecodeCopy(dst *TCPConn) error {
 	for {
 		readCount, buf, errRead := conn.DecodeRead()
 		if errRead != nil {
@@ -101,6 +144,7 @@ func (conn *TCPConn) DecodeCopy(dst io.Writer) error {
 			if errWrite != nil {
 				return errWrite
 			}
+			stream.Counter.FlowOutIncr(conn.R, uint64(writeCount))
 			if readCount != writeCount {
 				return io.ErrShortWrite
 			}
@@ -109,7 +153,7 @@ func (conn *TCPConn) DecodeCopy(dst io.Writer) error {
 }
 
 // EncodeCopy 从src中源源不断的读取原数据加密后写入到dst，直到src中没有数据可以再读取
-func (conn *TCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
+func (conn *TCPConn) EncodeCopy(dst *TCPConn) error {
 	buf := make([]byte, bufSize)
 	for {
 		readCount, errRead := conn.Read(buf)
@@ -121,12 +165,17 @@ func (conn *TCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
 		}
 		if readCount > 0 {
 			writeCount, errWrite := (&TCPConn{
-				ReadWriteCloser: dst,
-				Encryptor:       conn.Encryptor,
+				L:         dst.L,
+				R:         dst.R,
+				Reader:    bufio.NewReader(dst),
+				Writer:    dst,
+				Closer:    dst,
+				Encryptor: conn.Encryptor,
 			}).EncodeWrite(buf[:readCount])
 			if errWrite != nil {
 				return errWrite
 			}
+			stream.Counter.FlowInIncr(dst.R, uint64(writeCount))
 			if readCount != writeCount && writeCount == 0 {
 				return io.ErrShortWrite
 			}
