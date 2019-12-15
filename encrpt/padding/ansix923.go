@@ -1,4 +1,4 @@
-package pdding
+package padding
 
 import (
 	"bytes"
