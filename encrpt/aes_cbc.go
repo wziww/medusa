@@ -38,7 +38,7 @@ func (st *AesCbc) Decode(cipherBuf []byte) []byte {
 
 	blockMode := cipher.NewCBCDecrypter(block, iv)
 	blockMode.CryptBlocks(cipherBuf, cipherBuf)
-	cipherBuf,_ = padding.PKCS7UnPadding(cipherBuf, aes.BlockSize)
+	cipherBuf, _ = padding.PKCS7UnPadding(cipherBuf, aes.BlockSize)
 	return cipherBuf
 }
 
