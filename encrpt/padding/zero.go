@@ -15,7 +15,7 @@ func ZeroPadding(cipherData []byte, blockSize int) []byte {
 }
 
 // ZeroUnPadding ...
-func ZeroUnPadding(rawData []byte) ([]byte, error) {
+func ZeroUnPadding(rawData []byte, blockSize int) ([]byte, error) {
 	return bytes.TrimRightFunc(rawData, func(r rune) bool {
 		return r == rune(0)
 	}), nil
