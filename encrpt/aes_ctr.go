@@ -11,7 +11,8 @@ import (
 
 // AesCtr ...
 type AesCtr struct {
-	Password *[]byte
+	Password    *[]byte
+	PaddingMode string
 }
 
 var _ Encryptor = (*AesCtr)(nil)
@@ -41,6 +42,8 @@ func (st *AesCtr) Decode(cipherBuf []byte) []byte {
 	stream := cipher.NewCTR(block, iv)
 	// plainBuf := make([]byte, len(cipherBuf))
 	buf := cipherBuf[aes.BlockSize:]
+	// unpad
+	buf, _ = HandleUnPadding(st.PaddingMode)(buf, aes.BlockSize)
 	stream.XORKeyStream(buf, buf)
 	return buf
 }
@@ -52,6 +55,8 @@ func (st *AesCtr) Encode(plainBuf []byte) []byte {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
 	}
+	// pad
+	plainBuf = HandlePadding(st.PaddingMode)(plainBuf, aes.BlockSize)
 	cipherBuf := make([]byte, aes.BlockSize+len(plainBuf))
 	iv := cipherBuf[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {

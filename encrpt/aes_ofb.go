@@ -10,7 +10,8 @@ import (
 
 // AesOfb ...
 type AesOfb struct {
-	Password *[]byte
+	Password    *[]byte
+	PaddingMode string
 }
 
 var _ Encryptor = (*AesOfb)(nil)
@@ -24,6 +25,8 @@ func (st *AesOfb) Decode(cipherBuf []byte) []byte {
 	}
 	iv := cipherBuf[:aes.BlockSize]
 	buf := cipherBuf[aes.BlockSize:]
+	// unpad
+	buf, _ = HandleUnPadding(st.PaddingMode)(buf, aes.BlockSize)
 	stream := cipher.NewOFB(block, iv)
 	stream.XORKeyStream(buf, buf)
 	return buf
@@ -36,7 +39,8 @@ func (st *AesOfb) Encode(plainBuf []byte) []byte {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
 	}
-
+	// pad
+	plainBuf = HandlePadding(st.PaddingMode)(plainBuf, aes.BlockSize)
 	cipherBuf := make([]byte, aes.BlockSize+len(plainBuf))
 	iv := cipherBuf[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
