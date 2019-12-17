@@ -74,3 +74,22 @@ func (st *AesCfb) Encode(plainBuf []byte) []byte {
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plainBuf)
 	return ciphertext
 }
+
+// Construct ...
+func (st *AesCfb) Construct(name string) interface{} {
+	var targetKeySize int
+	switch name {
+	case "aes-128-cfb":
+		targetKeySize = 16
+	case "aes-192-cfb":
+		targetKeySize = 24
+	case "aes-256-cfb":
+		targetKeySize = 32
+	default:
+		return nil
+	}
+	if len(*st.Password) != targetKeySize {
+		return nil
+	}
+	return st
+}

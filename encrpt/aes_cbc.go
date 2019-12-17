@@ -64,3 +64,23 @@ func (st *AesCbc) Encode(plainBuf []byte) []byte {
 	blockMode.CryptBlocks(cipherBuf[aes.BlockSize:], plainBuf)
 	return cipherBuf
 }
+
+// Construct ...
+func (st *AesCbc) Construct(name string) interface{} {
+	var targetKeySize int
+	switch name {
+	case "aes-128-cbc":
+		targetKeySize = 16
+	case "aes-192-cbc":
+		targetKeySize = 24
+	case "aes-256-cbc":
+		targetKeySize = 32
+	default:
+		return nil
+	}
+	if len(*st.Password) != targetKeySize {
+		// log.FMTLog(log.LOGERROR, errors.New("aes_cbc: key size should be "+strconv.Itoa(size)))
+		return nil
+	}
+	return st
+}

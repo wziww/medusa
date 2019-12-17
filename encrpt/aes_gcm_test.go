@@ -6,7 +6,7 @@ import (
 )
 
 var password []byte = []byte("AES256Key-32Characters1234567890")
-var aesobj *Aes128gcm = &Aes128gcm{
+var aesobj *AesGcm = &AesGcm{
 	Password: &password,
 }
 
