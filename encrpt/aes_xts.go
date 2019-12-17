@@ -40,3 +40,22 @@ func (st *AesXts) Encode(plainBuf []byte) []byte {
 	cipher.Encrypt(cipherBuf, plainBuf, *st.Sector)
 	return cipherBuf
 }
+
+// Construct ...
+func (st *AesXts) Construct(name string) interface{}{
+		var targetKeySize int
+	switch name {
+	case "aes-128-xts":
+		targetKeySize = 16
+	case "aes-192-xts":
+		targetKeySize = 24
+	case "aes-256-xts":
+		targetKeySize = 32
+	default:
+		return nil
+	}
+	if len(*st.Password) != targetKeySize {
+		return nil
+	}
+	return st
+}

@@ -53,3 +53,22 @@ func (st *AesOfb) Encode(plainBuf []byte) []byte {
 	return cipherBuf
 
 }
+
+// Construct ...
+func (st *AesOfb) Construct(name string) interface{}{
+		var targetKeySize int
+	switch name {
+	case "aes-128-ofb":
+		targetKeySize = 16
+	case "aes-192-ofb":
+		targetKeySize = 24
+	case "aes-256-ofb":
+		targetKeySize = 32
+	default:
+		return nil
+	}
+	if len(*st.Password) != targetKeySize {
+		return nil
+	}
+	return st
+}

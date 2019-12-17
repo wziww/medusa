@@ -7,15 +7,15 @@ import (
 	"github/wziww/medusa/log"
 )
 
-// Aes128gcm ...
-type Aes128gcm struct {
+// AesGcm ...
+type AesGcm struct {
 	Password *[]byte
 }
 
-var _ Encryptor = (*Aes128gcm)(nil)
+var _ Encryptor = (*AesGcm)(nil)
 
 // Decode ...
-func (st *Aes128gcm) Decode(buf []byte) []byte {
+func (st *AesGcm) Decode(buf []byte) []byte {
 	nonce, _ := hex.DecodeString("000000000000000000000000") //加密用的nonce
 	block, err := aes.NewCipher(*st.Password)
 	if err != nil {
@@ -36,7 +36,7 @@ func (st *Aes128gcm) Decode(buf []byte) []byte {
 }
 
 // Encode ...
-func (st *Aes128gcm) Encode(buf []byte) []byte {
+func (st *AesGcm) Encode(buf []byte) []byte {
 	// The key argument should be the AES key, either 16 or 32 bytes
 	// to select AES-128 or AES-256.
 
@@ -55,4 +55,23 @@ func (st *Aes128gcm) Encode(buf []byte) []byte {
 	}
 
 	return aesgcm.Seal(nil, nonce, buf, nil)
+}
+
+// Construct ...
+func (st *AesGcm) Construct(name string) interface{}{
+		var targetKeySize int
+	switch name {
+	case "aes-128-gcm":
+		targetKeySize = 16
+	case "aes-192-gcm":
+		targetKeySize = 24
+	case "aes-256-gcm":
+		targetKeySize = 32
+	default:
+		return nil
+	}
+	if len(*st.Password) != targetKeySize {
+		return nil
+	}
+	return st
 }
