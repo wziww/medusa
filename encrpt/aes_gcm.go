@@ -9,7 +9,8 @@ import (
 
 // AesGcm ...
 type AesGcm struct {
-	Password *[]byte
+	Password    *[]byte
+	PaddingMode string
 }
 
 var _ Encryptor = (*AesGcm)(nil)
@@ -32,6 +33,8 @@ func (st *AesGcm) Decode(buf []byte) []byte {
 		log.FMTLog(log.LOGDEBUG, err)
 		return nil
 	}
+	// unpad
+	plaintext, _ = HandleUnPadding(st.PaddingMode)(plaintext, aes.BlockSize)
 	return plaintext
 }
 
@@ -53,13 +56,14 @@ func (st *AesGcm) Encode(buf []byte) []byte {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
 	}
-
+	// pad
+	buf = HandlePadding(st.PaddingMode)(buf, aes.BlockSize)
 	return aesgcm.Seal(nil, nonce, buf, nil)
 }
 
 // Construct ...
-func (st *AesGcm) Construct(name string) interface{}{
-		var targetKeySize int
+func (st *AesGcm) Construct(name string) interface{} {
+	var targetKeySize int
 	switch name {
 	case "aes-128-gcm":
 		targetKeySize = 16
