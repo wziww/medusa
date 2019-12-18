@@ -20,7 +20,7 @@ func TestStringCbc(t *testing.T) {
 }
 
 func TestBytesCbc(t *testing.T) {
-	s := []byte{5, 1, 0, 1, 3, 4, 5, 7, 4, 3, 2, 2, 3, 5, 6, 0, 0, 0, 0, 0, 0, 9}
+	s := []byte{5, 1, 0, 1, 3, 4, 5, 7, 4, 3, 2, 2, 3, 5, 6, 0 }
 	// s:=make([]byte,256)
 	sd := aesobjCbc.Encode([]byte(s))
 	s2 := aesobjCbc.Decode(sd)
