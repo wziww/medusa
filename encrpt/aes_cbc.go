@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github/wziww/medusa/log"
 	"io"
+	"strconv"
 )
 
 // AesCbc ...
@@ -20,13 +21,6 @@ var _ Encryptor = (*AesCbc)(nil)
 
 // Decode ...
 func (st *AesCbc) Decode(cipherBuf []byte) []byte {
-	// block, err := aes.NewCipher(*st.Password)
-	// st.cipherBlock
-	// block, err := GetSingleCipher(st.Password)
-	// if err != nil {
-	// 	log.FMTLog(log.LOGERROR, err)
-	// 	return nil
-	// }
 	if len(cipherBuf) < aes.BlockSize {
 		log.FMTLog(log.LOGERROR, errors.New("aes_cbc: cipherBuf too short"))
 		return nil
@@ -53,12 +47,6 @@ func (st *AesCbc) Encode(plainBuf []byte) []byte {
 	}
 	// pad
 	plainBuf = HandlePadding(st.PaddingMode)(plainBuf, aes.BlockSize)
-	// block, err := aes.NewCipher(*st.Password)
-	// // block, err := GetSingleCipher(st.Password)
-	// if err != nil {
-	// 	log.FMTLog(log.LOGERROR, err)
-	// 	return nil
-	// }
 	cipherBuf := make([]byte, aes.BlockSize+len(plainBuf))
 	iv := cipherBuf[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
@@ -83,7 +71,7 @@ func (st *AesCbc) Construct(name string) interface{} {
 		return nil
 	}
 	if len(*st.Password) != targetKeySize {
-		// log.FMTLog(log.LOGERROR, errors.New("aes_cbc: key size should be "+strconv.Itoa(size)))
+		log.FMTLog(log.LOGERROR, errors.New("aes_cbc: key size is"+strconv.Itoa(len(*st.Password))+"should be "+strconv.Itoa(targetKeySize)))
 		return nil
 	}
 	block, err := aes.NewCipher(*st.Password)
