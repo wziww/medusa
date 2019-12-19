@@ -177,16 +177,16 @@ func benchmarkAESCTRDecode(b *testing.B, buf []byte) {
 }
 
 func BenchmarkAESCTREncode1K(b *testing.B) {
-	benchmarkAESCBCEncode(b, make([]byte, 1024))
+	benchmarkAESCTREncode(b, make([]byte, 1024))
 }
 
 func BenchmarkAESCTRDecode1K(b *testing.B) {
-	benchmarkAESCBCDecode(b, make([]byte, 1024))
+	benchmarkAESCTRDecode(b, make([]byte, 1024))
 }
 func BenchmarkAESCTREncode10K(b *testing.B) {
-	benchmarkAESCBCEncode(b, make([]byte, 10*1024))
+	benchmarkAESCTREncode(b, make([]byte, 10*1024))
 }
 
 func BenchmarkAESCTRDecode10K(b *testing.B) {
-	benchmarkAESCBCDecode(b, make([]byte, 10*1024))
+	benchmarkAESCTRDecode(b, make([]byte, 10*1024))
 }

@@ -76,12 +76,12 @@ type encryptInfo struct {
 	encryptor Encryptor
 }
 
-// InitEncrypt ...
-func InitEncrypt(password *[]byte, method string, paddingMode string) Encryptor {
+// InitEncrypto ...
+func InitEncrypto(password *[]byte, method string, paddingMode string) Encryptor {
 	var encryptorMap = map[string]*encryptInfo{
-		"aes-128-cbc": {16, &AesCbc{password, paddingMode}},
-		"aes-192-cbc": {24, &AesCbc{password, paddingMode}},
-		"aes-256-cbc": {32, &AesCbc{password, paddingMode}},
+		"aes-128-cbc": {16, &AesCbc{password, paddingMode,nil}},
+		"aes-192-cbc": {24, &AesCbc{password, paddingMode,nil}},
+		"aes-256-cbc": {32, &AesCbc{password, paddingMode,nil}},
 		"aes-128-cfb": {16, &AesCfb{password, paddingMode}},
 		"aes-192-cfb": {24, &AesCfb{password, paddingMode}},
 		"aes-256-cfb": {32, &AesCfb{password, paddingMode}},

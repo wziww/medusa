@@ -13,6 +13,7 @@ import (
 type AesCbc struct {
 	Password    *[]byte
 	PaddingMode string
+	cipherBlock cipher.Block
 }
 
 var _ Encryptor = (*AesCbc)(nil)
@@ -20,11 +21,12 @@ var _ Encryptor = (*AesCbc)(nil)
 // Decode ...
 func (st *AesCbc) Decode(cipherBuf []byte) []byte {
 	// block, err := aes.NewCipher(*st.Password)
-	block, err := GetSingleCipher(st.Password)
-	if err != nil {
-		log.FMTLog(log.LOGERROR, err)
-		return nil
-	}
+	// st.cipherBlock
+	// block, err := GetSingleCipher(st.Password)
+	// if err != nil {
+	// 	log.FMTLog(log.LOGERROR, err)
+	// 	return nil
+	// }
 	if len(cipherBuf) < aes.BlockSize {
 		log.FMTLog(log.LOGERROR, errors.New("aes_cbc: cipherBuf too short"))
 		return nil
@@ -36,7 +38,7 @@ func (st *AesCbc) Decode(cipherBuf []byte) []byte {
 		return nil
 	}
 
-	blockMode := cipher.NewCBCDecrypter(*block, iv)
+	blockMode := cipher.NewCBCDecrypter(st.cipherBlock, iv)
 	blockMode.CryptBlocks(cipherBuf, cipherBuf)
 	// unpad
 	cipherBuf, _ = HandleUnPadding(st.PaddingMode)(cipherBuf, aes.BlockSize)
@@ -52,17 +54,17 @@ func (st *AesCbc) Encode(plainBuf []byte) []byte {
 	// pad
 	plainBuf = HandlePadding(st.PaddingMode)(plainBuf, aes.BlockSize)
 	// block, err := aes.NewCipher(*st.Password)
-	block, err := GetSingleCipher(st.Password)
-	if err != nil {
-		log.FMTLog(log.LOGERROR, err)
-		return nil
-	}
+	// // block, err := GetSingleCipher(st.Password)
+	// if err != nil {
+	// 	log.FMTLog(log.LOGERROR, err)
+	// 	return nil
+	// }
 	cipherBuf := make([]byte, aes.BlockSize+len(plainBuf))
 	iv := cipherBuf[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		log.FMTLog(log.LOGERROR, err)
 	}
-	blockMode := cipher.NewCBCEncrypter(*block, iv)
+	blockMode := cipher.NewCBCEncrypter(st.cipherBlock, iv)
 	blockMode.CryptBlocks(cipherBuf[aes.BlockSize:], plainBuf)
 	return cipherBuf
 }
@@ -84,5 +86,11 @@ func (st *AesCbc) Construct(name string) interface{} {
 		// log.FMTLog(log.LOGERROR, errors.New("aes_cbc: key size should be "+strconv.Itoa(size)))
 		return nil
 	}
+	block, err := aes.NewCipher(*st.Password)
+	if err != nil {
+		log.FMTLog(log.LOGERROR, err)
+		return nil
+	}
+	st.cipherBlock = block
 	return st
 }
