@@ -6,9 +6,8 @@ import (
 )
 
 var password []byte = []byte("AES256Key-32Characters1234567890")
-var aesobj *AesGcm = &AesGcm{
-	Password: &password,
-}
+
+var aesobj = (&AesGcm{&password, "", nil}).Construct("aes-256-gcm").(*AesGcm)
 
 func TestString(t *testing.T) {
 	s := "hellow world!"

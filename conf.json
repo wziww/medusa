@@ -1,11 +1,11 @@
 {
   "base": {
     "password": "AES256Key-32Characters1234567890",
-    "crypto": "aes-128-gcm",
+    "crypto": "aes-256-gcm",
     "padding": ""
   },
   "server": {
-    "port": 8080,
+    "port": 8088,
     "api": {
       "port": 8082,
       "enable": true
@@ -13,7 +13,7 @@
   },
   "client": {
     "port": 8081,
-    "remoteAddress": "0.0.0.0:8080",
+    "remoteAddress": "0.0.0.0:8088",
     "api": {
       "port": 8083,
       "enable": false

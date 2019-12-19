@@ -28,7 +28,7 @@ func main() {
 	stream.APIServerInit()
 	// 加密器初始化
 	password := []byte(config.C.Base.Password)
-	encryptor := encrpt.InitEncrypto(&password, config.C.Base.Crypto)
+	encryptor := encrpt.InitEncrypto(&password, config.C.Base.Crypto,config.C.Base.Padding)
 	if encryptor == nil {
 		log.FMTLog(log.LOGERROR, "unsupport encrypto:", config.C.Base.Crypto)
 		os.Exit(0)

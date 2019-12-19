@@ -5,14 +5,13 @@ import (
 )
 
 var passwordCtr []byte = []byte("AES256Key-32Characters1234567890")
-var aesobjCtr *AesCtr = &AesCtr{
-	Password: &passwordCtr,
-}
+
+var aesobjCtr = (&AesCtr{&passwordCtr, "", nil}).Construct("aes-256-ctr").(*AesCtr)
 
 func TestStringCtr(t *testing.T) {
 	s := "hello world!"
-	sd := aesobj.Encode([]byte(s))
-	s2 := aesobj.Decode(sd)
+	sd := aesobjCtr.Encode([]byte(s))
+	s2 := aesobjCtr.Decode(sd)
 	if s != string(s2) {
 		t.Fatal(s, "!=", string(s2), "fail to encode and decode")
 	}
@@ -20,8 +19,8 @@ func TestStringCtr(t *testing.T) {
 
 func TestBytesCtr(t *testing.T) {
 	s := []byte{5, 1, 0, 1, 3, 4, 5, 7, 4, 3, 2, 2, 3, 5, 6, 0, 0, 0, 0, 0, 0, 9}
-	sd := aesobj.Encode([]byte(s))
-	s2 := aesobj.Decode(sd)
+	sd := aesobjCtr.Encode([]byte(s))
+	s2 := aesobjCtr.Decode(sd)
 	for i := range s {
 		if s[i] != s2[i] {
 			t.Fatal(s, "!=", string(s2), "fail to encode and decode")
