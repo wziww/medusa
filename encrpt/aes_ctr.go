@@ -4,7 +4,9 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	// "errors"
+	"errors"
+	"strconv"
+
 	"github/wziww/medusa/log"
 	"io"
 )
@@ -13,34 +15,15 @@ import (
 type AesCtr struct {
 	Password    *[]byte
 	PaddingMode string
+	cipherBlock cipher.Block
 }
 
 var _ Encryptor = (*AesCtr)(nil)
 
-// NewAesCtr constructor...
-// func NewAesCtr(password *[]byte, iv *[]byte) *aesCtr {
-// 	if len(*password) != 16 && len(*password) != 24 && len(*password) != 32 {
-// 		log.FMTLog(log.LOGERROR, errors.New("aes_ctr: password长度必须为16、24或32位"))
-// 		return nil
-// 	}
-// 	if len(*iv) != 16 {
-// 		log.FMTLog(log.LOGERROR, errors.New("aes_ctr: iv长度必须为16位"))
-// 		return nil
-// 	}
-// 	ctr := &aesCtr{password, iv}
-// 	return ctr
-// }
-
 // Decode ...
 func (st *AesCtr) Decode(cipherBuf []byte) []byte {
-	block, err := aes.NewCipher(*st.Password)
-	if err != nil {
-		log.FMTLog(log.LOGERROR, err)
-		return nil
-	}
 	iv := cipherBuf[:aes.BlockSize]
-	stream := cipher.NewCTR(block, iv)
-	// plainBuf := make([]byte, len(cipherBuf))
+	stream := cipher.NewCTR(st.cipherBlock, iv)
 	buf := cipherBuf[aes.BlockSize:]
 	// unpad
 	buf, _ = HandleUnPadding(st.PaddingMode)(buf, aes.BlockSize)
@@ -50,11 +33,6 @@ func (st *AesCtr) Decode(cipherBuf []byte) []byte {
 
 // Encode ...
 func (st *AesCtr) Encode(plainBuf []byte) []byte {
-	block, err := aes.NewCipher(*st.Password)
-	if err != nil {
-		log.FMTLog(log.LOGERROR, err)
-		return nil
-	}
 	// pad
 	plainBuf = HandlePadding(st.PaddingMode)(plainBuf, aes.BlockSize)
 	cipherBuf := make([]byte, aes.BlockSize+len(plainBuf))
@@ -63,15 +41,14 @@ func (st *AesCtr) Encode(plainBuf []byte) []byte {
 		log.FMTLog(log.LOGDEBUG, err)
 		// return nil
 	}
-	stream := cipher.NewCTR(block, iv)
-	// cipherBuf := make([]byte, len(plainBuf))
+	stream := cipher.NewCTR(st.cipherBlock, iv)
 	stream.XORKeyStream(cipherBuf[aes.BlockSize:], plainBuf)
 	return cipherBuf
 }
 
 // Construct ...
-func (st *AesCtr) Construct(name string) interface{}{
-		var targetKeySize int
+func (st *AesCtr) Construct(name string) interface{} {
+	var targetKeySize int
 	switch name {
 	case "aes-128-ctr":
 		targetKeySize = 16
@@ -83,7 +60,14 @@ func (st *AesCtr) Construct(name string) interface{}{
 		return nil
 	}
 	if len(*st.Password) != targetKeySize {
+		log.FMTLog(log.LOGERROR, errors.New("aes_ctr: key size is"+strconv.Itoa(len(*st.Password))+"should be "+strconv.Itoa(targetKeySize)))
 		return nil
 	}
+	block, err := aes.NewCipher(*st.Password)
+	if err != nil {
+		log.FMTLog(log.LOGERROR, err)
+		return nil
+	}
+	st.cipherBlock = block
 	return st
 }

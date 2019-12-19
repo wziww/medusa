@@ -4,13 +4,16 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/hex"
+	"errors"
 	"github/wziww/medusa/log"
+	"strconv"
 )
 
 // AesGcm ...
 type AesGcm struct {
 	Password    *[]byte
 	PaddingMode string
+	cipherBlock cipher.Block
 }
 
 var _ Encryptor = (*AesGcm)(nil)
@@ -18,12 +21,7 @@ var _ Encryptor = (*AesGcm)(nil)
 // Decode ...
 func (st *AesGcm) Decode(buf []byte) []byte {
 	nonce, _ := hex.DecodeString("000000000000000000000000") //加密用的nonce
-	block, err := aes.NewCipher(*st.Password)
-	if err != nil {
-		log.FMTLog(log.LOGERROR, err)
-		return nil
-	}
-	aesgcm, err := cipher.NewGCM(block)
+	aesgcm, err := cipher.NewGCM(st.cipherBlock)
 	if err != nil {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
@@ -43,15 +41,9 @@ func (st *AesGcm) Encode(buf []byte) []byte {
 	// The key argument should be the AES key, either 16 or 32 bytes
 	// to select AES-128 or AES-256.
 
-	block, err := aes.NewCipher(*st.Password)
-	if err != nil {
-		log.FMTLog(log.LOGERROR, err)
-		return nil
-	}
-
 	nonce := make([]byte, 12)
 
-	aesgcm, err := cipher.NewGCM(block)
+	aesgcm, err := cipher.NewGCM(st.cipherBlock)
 	if err != nil {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
@@ -75,7 +67,14 @@ func (st *AesGcm) Construct(name string) interface{} {
 		return nil
 	}
 	if len(*st.Password) != targetKeySize {
+		log.FMTLog(log.LOGERROR, errors.New("aes_gcm: key size is"+strconv.Itoa(len(*st.Password))+"should be "+strconv.Itoa(targetKeySize)))
 		return nil
 	}
+	block, err := aes.NewCipher(*st.Password)
+	if err != nil {
+		log.FMTLog(log.LOGERROR, err)
+		return nil
+	}
+	st.cipherBlock = block
 	return st
 }
