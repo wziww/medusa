@@ -5,9 +5,8 @@ import (
 )
 
 var passwordCfb []byte = []byte("AES256Key-32Characters1234567890")
-var aesobjCfb *AesCfb = &AesCfb{
-	Password: &passwordCfb,
-}
+
+var aesobjCfb = (&AesCfb{&passwordCfb, "", nil}).Construct("aes-256-cfb").(*AesCfb)
 
 func TestStringCfb(t *testing.T) {
 	s := "hello world!"

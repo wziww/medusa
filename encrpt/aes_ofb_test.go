@@ -5,9 +5,8 @@ import (
 )
 
 var passwordOfb []byte = []byte("AES256Key-32Characters1234567890")
-var aesobjOfb *AesOfb = &AesOfb{
-	Password: &passwordOfb,
-}
+
+var aesobjOfb = (&AesOfb{&passwordOfb, "", nil}).Construct("aes-256-ofb").(*AesOfb)
 
 func TestStringOfb(t *testing.T) {
 	s := "hellow world!"

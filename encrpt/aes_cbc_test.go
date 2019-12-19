@@ -5,13 +5,8 @@ import (
 )
 
 var passwordCbc []byte = []byte("AES256Key-32Characters1234567890")
-var aesobjCbc1 *AesCbc = &AesCbc{
-	Password: &passwordCbc,
-	PaddingMode: "",
-	cipherBlock:nil,
-}
 
-var aesobjCbc=(aesobjCbc1.Construct("aes-256-cbc")).(*AesCbc)
+var aesobjCbc = (&AesCbc{&passwordCbc, "", nil}).Construct("aes-256-cbc").(*AesCbc)
 
 func TestStringCbc(t *testing.T) {
 	s := "hello world haha"
@@ -23,7 +18,7 @@ func TestStringCbc(t *testing.T) {
 }
 
 func TestBytesCbc(t *testing.T) {
-	s := []byte{5, 1, 0, 1, 3, 4, 5, 7, 4, 3, 2, 2, 3, 5, 6, 0 }
+	s := []byte{5, 1, 0, 1, 3, 4, 5, 7, 4, 3, 2, 2, 3, 5, 6, 0}
 	// s:=make([]byte,256)
 	sd := aesobjCbc.Encode([]byte(s))
 	s2 := aesobjCbc.Decode(sd)
