@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 )
 
+const tag = 0x80
+
 var bufSize int64 = 1 << 10 //1kb
 
 var bp sync.Pool
@@ -41,10 +43,14 @@ type TCPConn struct {
 	io.Closer
 	io.Writer
 	Encryptor encrpt.Encryptor
+	MutexR    sync.Mutex
+	MutexW    sync.Mutex
 }
 
 // DecodeRead ...
 func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
+	conn.MutexR.Lock()
+	defer conn.MutexR.Unlock()
 	// /**
 	//   +----+-----+-------+------+----------+----------+
 	//   |LEN | 								DATA 										 |
@@ -67,10 +73,10 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 		return
 	}
 	l = int64(binary.BigEndian.Uint64((*b)[:8]))
-	atomic.AddUint64(stream.FlowIn, uint64(l))
-	if l <= 0 {
+	if l <= 0 || l > (bufSize<<10) {
 		return
 	}
+	atomic.AddUint64(stream.FlowIn, uint64(l))
 	// /**
 	//   +----+-----+-------+------+----------+----------+
 	//   |LEN | 								DATA 										 |
@@ -123,6 +129,8 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 		// */
 		var l int64 = int64(len(buf))
 		atomic.AddUint64(stream.FlowOut, uint64(l))
+		conn.MutexW.Lock()
+		defer conn.MutexW.Unlock()
 		binary.Write(conn, binary.BigEndian, l)
 		return conn.Write(buf)
 	}
