@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"github/wziww/medusa/config"
 	"github/wziww/medusa/encrpt"
@@ -11,16 +12,19 @@ import (
 	"testing"
 )
 
-var server *net.TCPListener
-
-var serverAddress *net.TCPAddr
-var client *net.TCPConn
 var encryptor encrpt.Encryptor
+var ErrNetClosing = errors.New("use of closed network connection")
 
 func TestMain(m *testing.M) {
 	config.Init()
 	password := []byte(config.C.Base.Password)
 	encryptor = encrpt.InitEncrypto(&password, config.C.Base.Crypto)
+	m.Run()
+}
+func Init() (*net.TCPListener, *net.TCPConn) {
+	var server *net.TCPListener
+	var serverAddress *net.TCPAddr
+	var client *net.TCPConn
 	serverAddress, resoveErr := net.ResolveTCPAddr("tcp", "0.0.0.0:0")
 	if resoveErr != nil {
 		fmt.Println(resoveErr)
@@ -43,7 +47,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(clientError)
 		os.Exit(0)
 	}
-	m.Run()
+	return server, client
 }
 
 type rwc struct {
@@ -100,6 +104,7 @@ func TestWriteRead(t *testing.T) {
 }
 
 func TestCopy(t *testing.T) {
+	server, client := Init()
 	flT := &TCPConn{
 		L:         "",
 		R:         "",
@@ -130,4 +135,150 @@ func TestCopy(t *testing.T) {
 	if string(buf[:n]) != s {
 		t.Fatal(s, "!=", buf, "fail to Copy")
 	}
+}
+
+func TestCloseEncodeCopy(t *testing.T) {
+	server, client := Init()
+	flT := &TCPConn{
+		L:         "",
+		R:         "",
+		Reader:    bufio.NewReader(client),
+		Writer:    client,
+		Closer:    client,
+		Encryptor: encryptor,
+	}
+	conn, connError := server.Accept()
+	if connError != nil {
+		t.Fatal(connError)
+	}
+	connT := &TCPConn{
+		Reader:    bufio.NewReader(conn),
+		Writer:    conn,
+		Closer:    conn,
+		Encryptor: encryptor,
+	}
+	s := "hello World"
+	flT.Write([]byte(s))
+	connT.Close()
+	buf := make([]byte, bufSize)
+	c, err := encodeCopy(connT, connT, buf)
+	if c != false && err != ErrNetClosing {
+		t.Fatal(err)
+	}
+}
+
+func TestCloseEncodeCopy2(t *testing.T) {
+	server, client := Init()
+	flT := &TCPConn{
+		L:         "",
+		R:         "",
+		Reader:    bufio.NewReader(client),
+		Writer:    client,
+		Closer:    client,
+		Encryptor: encryptor,
+	}
+	conn, connError := server.Accept()
+	if connError != nil {
+		t.Fatal(connError)
+	}
+	connT := &TCPConn{
+		Reader:    bufio.NewReader(conn),
+		Writer:    conn,
+		Closer:    conn,
+		Encryptor: encryptor,
+	}
+	s := "hello World"
+	flT.Write([]byte(s))
+	flT.Close()
+	buf := make([]byte, bufSize)
+	c, err := encodeCopy(connT, flT, buf)
+	if c != false && err != ErrNetClosing {
+		t.Fatal(err)
+	}
+}
+func TestCloseDecodeCopy(t *testing.T) {
+	server, client := Init()
+	flT := &TCPConn{
+		L:         "",
+		R:         "",
+		Reader:    bufio.NewReader(client),
+		Writer:    client,
+		Closer:    client,
+		Encryptor: encryptor,
+	}
+	conn, connError := server.Accept()
+	if connError != nil {
+		t.Fatal(connError)
+	}
+	connT := &TCPConn{
+		Reader:    bufio.NewReader(conn),
+		Writer:    conn,
+		Closer:    conn,
+		Encryptor: encryptor,
+	}
+	s := "hello World"
+	flT.Write([]byte(s))
+	flT.Close()
+	buf := make([]byte, bufSize)
+	encodeCopy(connT, connT, buf)
+	c, err := decodeCopy(flT, flT)
+	if c != false && err != ErrNetClosing {
+		t.Fatal(err)
+	}
+}
+func TestCloseDecodeCopy2(t *testing.T) {
+	server, client := Init()
+	flT := &TCPConn{
+		L:         "",
+		R:         "",
+		Reader:    bufio.NewReader(client),
+		Writer:    client,
+		Closer:    client,
+		Encryptor: encryptor,
+	}
+	conn, connError := server.Accept()
+	if connError != nil {
+		t.Fatal(connError)
+	}
+	connT := &TCPConn{
+		Reader:    bufio.NewReader(conn),
+		Writer:    conn,
+		Closer:    conn,
+		Encryptor: encryptor,
+	}
+	s := "hello World"
+	flT.Write([]byte(s))
+	buf := make([]byte, bufSize)
+	encodeCopy(connT, connT, buf)
+	connT.Close()
+	c, err := decodeCopy(flT, connT)
+	if c != false && err != ErrNetClosing {
+		t.Fatal(err)
+	}
+}
+
+func TestEncodeCopy(t *testing.T) {
+	server, client := Init()
+	flT := &TCPConn{
+		L:         "",
+		R:         "",
+		Reader:    bufio.NewReader(client),
+		Writer:    client,
+		Closer:    client,
+		Encryptor: encryptor,
+	}
+	conn, connError := server.Accept()
+	if connError != nil {
+		t.Fatal(connError)
+	}
+	connT := &TCPConn{
+		Reader:    bufio.NewReader(conn),
+		Writer:    conn,
+		Closer:    conn,
+		Encryptor: encryptor,
+	}
+	s := "hello World"
+	flT.Write([]byte(s))
+	connT.Close()
+	connT.EncodeCopy(flT)
 }
