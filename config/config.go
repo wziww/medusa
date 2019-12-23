@@ -61,7 +61,6 @@ func Init() {
 	 * 默认文件：config 文件夹下 conf.json 或者项目根目录下 conf.json
 	 */
 	configPath := flag.String("c", "../conf.json", "config path")
-	fmt.Println("config path----->>>",*configPath)
 	flag.Parse()
 	if C == nil {
 		fdata, openError := ioutil.ReadFile(*configPath)
