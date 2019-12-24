@@ -5,7 +5,7 @@
     // 32 位密码
     "password": "AES256Key-32Characters1234567890",
     // 加密方式
-    "crypto": "aes-128-gcm",
+    "crypto": "aes-256-gcm",
     //  填充方式
     "padding": ""
   },
