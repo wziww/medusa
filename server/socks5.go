@@ -33,7 +33,7 @@ func handleConn(conn *medusa.TCPConn) {
 		log.FMTLog(log.LOGERROR, err)
 		return
 	}
-	if buf[0] != 0x05 {
+	if len(buf) < 1 || buf[0] != 0x05 {
 		return
 	}
 
@@ -58,16 +58,12 @@ func handleConn(conn *medusa.TCPConn) {
 	//   +----+-----+-------+------+----------+----------+
 	// */
 
-	// // 获取真正的远程服务的地址
 	n, buf, err := conn.DecodeRead()
-	// // n 最短的长度为7 情况为 ATYP=3 DST.ADDR占用1字节 值为0x0
 	if err != nil || n < 7 {
 		log.FMTLog(log.LOGERROR, err)
 		return
 	}
 
-	// // CMD代表客户端请求的类型，值长度也是1个字节，有三种类型
-	// // CONNECT X'01'
 	if buf[1] != 0x01 {
 		// 目前只支持 CONNECT
 		return
