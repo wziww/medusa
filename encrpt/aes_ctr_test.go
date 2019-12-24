@@ -5,7 +5,6 @@ import (
 )
 
 var passwordCtr []byte = []byte("AES256Key-32Characters1234567890")
-
 var aesobjCtr = (&AesCtr{&passwordCtr, "", nil}).Construct("aes-256-ctr").(*AesCtr)
 
 func TestStringCtr(t *testing.T) {
