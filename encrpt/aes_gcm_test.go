@@ -2,7 +2,6 @@ package encrpt
 
 import (
 	"testing"
-	// "github/wziww/medusa/config"
 )
 
 var password []byte = []byte("AES256Key-32Characters1234567890")
