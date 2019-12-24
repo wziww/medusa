@@ -18,7 +18,7 @@ var ErrNetClosing = errors.New("use of closed network connection")
 func TestMain(m *testing.M) {
 	config.Init()
 	password := []byte(config.C.Base.Password)
-	encryptor = encrpt.InitEncrypto(&password, config.C.Base.Crypto)
+	encryptor = encrpt.InitEncrypto(&password, config.C.Base.Crypto, config.C.Base.Padding)
 	m.Run()
 }
 func Init() (*net.TCPListener, *net.TCPConn) {
