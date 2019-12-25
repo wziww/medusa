@@ -38,7 +38,7 @@ func (st *AesOfb) Encode(plainBuf []byte) []byte {
 	iv := cipherBuf[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		log.FMTLog(log.LOGDEBUG, err)
-		// return nil
+		return nil
 	}
 
 	stream := cipher.NewOFB(st.cipherBlock, iv)

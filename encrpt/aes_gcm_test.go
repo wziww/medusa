@@ -9,7 +9,7 @@ var password []byte = []byte("AES256Key-32Characters1234567890")
 var aesobj = (&AesGcm{&password, "", nil}).Construct("aes-256-gcm").(*AesGcm)
 
 func TestString(t *testing.T) {
-	s := "hellow world!"
+	s := "hello,world!"
 	sd := aesobj.Encode([]byte(s))
 	s2 := aesobj.Decode(sd)
 	if s != string(s2) {
@@ -158,3 +158,36 @@ func TestDecodeData(t *testing.T) {
 		t.Fatal("test decode data error")
 	}
 }
+
+func benchmarkAESGCMEncode(b *testing.B, buf []byte) {
+	b.SetBytes(int64(len(buf)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		aesobj.Encode([]byte(buf))
+	}
+}
+
+func benchmarkAESGCMDecode(b *testing.B, buf []byte) {
+	b.SetBytes(int64(len(buf)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		aesobj.Decode(buf)
+	}
+}
+
+func BenchmarkAESGCMEncode1K(b *testing.B) {
+	benchmarkAESGCMEncode(b, make([]byte, 1024))
+}
+
+func BenchmarkAESGCMDecode1K(b *testing.B) {
+	benchmarkAESGCMDecode(b, make([]byte, 1024))
+}
+func BenchmarkAESGCMEncode10K(b *testing.B) {
+	benchmarkAESGCMEncode(b, make([]byte, 10*1024))
+}
+
+func BenchmarkAESGCMDecode10K(b *testing.B) {
+	benchmarkAESGCMDecode(b, make([]byte, 10*1024))
+}
+
+

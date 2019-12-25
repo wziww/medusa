@@ -51,6 +51,7 @@ func (st *AesCbc) Encode(plainBuf []byte) []byte {
 	iv := cipherBuf[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		log.FMTLog(log.LOGERROR, err)
+		return nil
 	}
 	blockMode := cipher.NewCBCEncrypter(st.cipherBlock, iv)
 	blockMode.CryptBlocks(cipherBuf[aes.BlockSize:], plainBuf)

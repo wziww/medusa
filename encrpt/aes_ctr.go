@@ -38,8 +38,8 @@ func (st *AesCtr) Encode(plainBuf []byte) []byte {
 	cipherBuf := make([]byte, aes.BlockSize+len(plainBuf))
 	iv := cipherBuf[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		log.FMTLog(log.LOGDEBUG, err)
-		// return nil
+		log.FMTLog(log.LOGERROR, err)
+		return nil
 	}
 	stream := cipher.NewCTR(st.cipherBlock, iv)
 	stream.XORKeyStream(cipherBuf[aes.BlockSize:], plainBuf)

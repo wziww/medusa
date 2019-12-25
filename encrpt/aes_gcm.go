@@ -3,9 +3,10 @@ package encrpt
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/hex"
+	"crypto/rand"
 	"errors"
 	"github/wziww/medusa/log"
+	"io"
 	"strconv"
 )
 
@@ -20,13 +21,13 @@ var _ Encryptor = (*AesGcm)(nil)
 
 // Decode ...
 func (st *AesGcm) Decode(buf []byte) []byte {
-	nonce, _ := hex.DecodeString("000000000000000000000000") //加密用的nonce
+	nonce := buf[:12]
 	aesgcm, err := cipher.NewGCM(st.cipherBlock)
 	if err != nil {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
 	}
-	plaintext, err := aesgcm.Open(nil, nonce, buf, nil)
+	plaintext, err := aesgcm.Open(nil, nonce, buf[12:], nil)
 	if err != nil {
 		log.FMTLog(log.LOGDEBUG, err)
 		return nil
@@ -41,16 +42,21 @@ func (st *AesGcm) Encode(buf []byte) []byte {
 	// The key argument should be the AES key, either 16 or 32 bytes
 	// to select AES-128 or AES-256.
 
+	// pad
+	buf = HandlePadding(st.PaddingMode)(buf, aes.BlockSize)
 	nonce := make([]byte, 12)
-
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		log.FMTLog(log.LOGERROR, err)
+		return nil
+	}
 	aesgcm, err := cipher.NewGCM(st.cipherBlock)
 	if err != nil {
 		log.FMTLog(log.LOGERROR, err)
 		return nil
 	}
-	// pad
-	buf = HandlePadding(st.PaddingMode)(buf, aes.BlockSize)
-	return aesgcm.Seal(nil, nonce, buf, nil)
+
+	return append(nonce, aesgcm.Seal(nil, nonce, buf, nil)...)
+
 }
 
 // Construct ...
