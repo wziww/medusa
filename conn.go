@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 )
 
+const tag = 0x80
+
 var bufSize int64 = 1 << 10 //1kb
 
 var bp sync.Pool
@@ -41,10 +43,14 @@ type TCPConn struct {
 	io.Closer
 	io.Writer
 	Encryptor encrpt.Encryptor
+	MutexR    sync.Mutex
+	MutexW    sync.Mutex
 }
 
 // DecodeRead ...
 func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
+	conn.MutexR.Lock()
+	defer conn.MutexR.Unlock()
 	// /**
 	//   +----+-----+-------+------+----------+----------+
 	//   |LEN | 								DATA 										 |
@@ -67,10 +73,10 @@ func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
 		return
 	}
 	l = int64(binary.BigEndian.Uint64((*b)[:8]))
-	atomic.AddUint64(stream.FlowIn, uint64(l))
-	if l <= 0 {
+	if l <= 0 || l > (bufSize<<10) {
 		return
 	}
+	atomic.AddUint64(stream.FlowIn, uint64(l))
 	// /**
 	//   +----+-----+-------+------+----------+----------+
 	//   |LEN | 								DATA 										 |
@@ -123,6 +129,8 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 		// */
 		var l int64 = int64(len(buf))
 		atomic.AddUint64(stream.FlowOut, uint64(l))
+		conn.MutexW.Lock()
+		defer conn.MutexW.Unlock()
 		binary.Write(conn, binary.BigEndian, l)
 		return conn.Write(buf)
 	}
@@ -132,53 +140,68 @@ func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
 // DecodeCopy 从src中源源不断的读取加密后的数据解密后写入到dst，直到src中没有数据可以再读取
 func (conn *TCPConn) DecodeCopy(dst *TCPConn) error {
 	for {
-		readCount, buf, errRead := conn.DecodeRead()
-		if errRead != nil {
-			if errRead != io.EOF {
-				return errRead
-			}
-			return nil
-		}
-		if readCount > 0 {
-			writeCount, errWrite := dst.Write(buf[:readCount])
-			if errWrite != nil {
-				return errWrite
-			}
-			stream.Counter.FlowOutIncr(conn.R, uint64(writeCount))
-			if readCount != writeCount {
-				return io.ErrShortWrite
-			}
+		c, err := decodeCopy(conn, dst)
+		if !c {
+			return err
 		}
 	}
+}
+
+func decodeCopy(conn, dst *TCPConn) (bool, error) {
+	readCount, buf, errRead := conn.DecodeRead()
+	if errRead != nil {
+		if errRead != io.EOF {
+			return false, errRead
+		}
+		return false, nil
+	}
+	if readCount > 0 {
+		writeCount, errWrite := dst.Write(buf[:readCount])
+		if errWrite != nil {
+			return false, errWrite
+		}
+		stream.Counter.FlowOutIncr(conn.R, uint64(writeCount))
+		if readCount != writeCount {
+			return false, io.ErrShortWrite
+		}
+	}
+	return true, nil
 }
 
 // EncodeCopy 从src中源源不断的读取原数据加密后写入到dst，直到src中没有数据可以再读取
 func (conn *TCPConn) EncodeCopy(dst *TCPConn) error {
 	buf := make([]byte, bufSize)
 	for {
-		readCount, errRead := conn.Read(buf)
-		if errRead != nil {
-			if errRead != io.EOF {
-				return errRead
-			}
-			return nil
-		}
-		if readCount > 0 {
-			writeCount, errWrite := (&TCPConn{
-				L:         dst.L,
-				R:         dst.R,
-				Reader:    bufio.NewReader(dst),
-				Writer:    dst,
-				Closer:    dst,
-				Encryptor: conn.Encryptor,
-			}).EncodeWrite(buf[:readCount])
-			if errWrite != nil {
-				return errWrite
-			}
-			stream.Counter.FlowInIncr(dst.R, uint64(writeCount))
-			if readCount != writeCount && writeCount == 0 {
-				return io.ErrShortWrite
-			}
+		c, err := encodeCopy(conn, dst, buf)
+		if !c {
+			return err
 		}
 	}
+}
+func encodeCopy(conn, dst *TCPConn, buf []byte) (bool, error) {
+	readCount, errRead := conn.Read(buf)
+	if errRead != nil {
+		if errRead != io.EOF {
+			return false, errRead
+		}
+		return false, nil
+	}
+	if readCount > 0 {
+		writeCount, errWrite := (&TCPConn{
+			L:         dst.L,
+			R:         dst.R,
+			Reader:    bufio.NewReader(dst),
+			Writer:    dst,
+			Closer:    dst,
+			Encryptor: conn.Encryptor,
+		}).EncodeWrite(buf[:readCount])
+		if errWrite != nil {
+			return false, errWrite
+		}
+		stream.Counter.FlowInIncr(dst.R, uint64(writeCount))
+		if readCount != writeCount && writeCount == 0 {
+			return false, io.ErrShortWrite
+		}
+	}
+	return true, nil
 }
