@@ -23,6 +23,7 @@ type Config struct {
 type Base struct {
 	Password string `json:"password"`
 	Crypto   string `json:"crypto"`
+	Padding  string `json:"padding"`
 	Client   bool
 }
 
