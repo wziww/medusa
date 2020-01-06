@@ -76,6 +76,9 @@ func sshandleConn(conn *medusa.TCPConn) {
 	case 0x03:
 		//	DOMAINNAME: X'03'
 		n = 2 + int(buf[1])
+		if len(buf) < n {
+			return
+		}
 		ipAddr, err := net.ResolveIPAddr("ip", string(buf[2:n]))
 		if err != nil {
 			log.FMTLog(log.LOGERROR, err)
