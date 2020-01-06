@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"github/wziww/medusa"
 	"github/wziww/medusa/config"
-	"github/wziww/medusa/encrpt"
+	"github/wziww/medusa/encrypt"
 	"github/wziww/medusa/log"
 	"github/wziww/medusa/stream"
 	"net"
@@ -28,9 +28,9 @@ func main() {
 	stream.APIServerInit()
 	// 加密器初始化
 	password := []byte(config.C.Base.Password)
-	encryptor := encrpt.InitEncrypto(&password, config.C.Base.Crypto, config.C.Base.Padding)
+	encryptor := encrypt.InitEncrypto(&password, config.C.Base.Crypto, config.C.Base.Padding, nil)
 	if encryptor == nil {
-		log.FMTLog(log.LOGERROR, "unsupport encrypto:", config.C.Base.Crypto)
+		log.FMTLog(log.LOGERROR, "encrypto:", config.C.Base.Crypto, " init error,please checkout your config file")
 		os.Exit(0)
 	}
 	// 服务启动
@@ -50,13 +50,18 @@ func main() {
 		// log.FMTLog(log.LOGINFO, localConn.RemoteAddr(), "connected")
 		// localConn被关闭时直接清除所有数据 不管没有发送的数据
 		localConn.SetLinger(0)
-		go handleConn(&medusa.TCPConn{
+		encryptor := encrypt.InitEncrypto(&password, config.C.Base.Crypto, config.C.Base.Padding, []byte(encrypt.GetRandString(encryptor.Ivlen())))
+		if encryptor == nil {
+			log.FMTLog(log.LOGERROR, "encrypto:", config.C.Base.Crypto, " init error,please checkout your config file")
+			continue
+		}
+		go sshandleConn(&medusa.TCPConn{
 			L:         localConn.LocalAddr().String(),
 			R:         localConn.RemoteAddr().String(),
 			Reader:    bufio.NewReader(localConn),
 			Closer:    localConn,
 			Writer:    localConn,
-			Encryptor: encryptor,
+			Encryptor: &encryptor,
 		})
 	}
 }

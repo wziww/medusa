@@ -5,20 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"github/wziww/medusa/config"
-	"github/wziww/medusa/encrpt"
+	"github/wziww/medusa/encrypt"
 	"net"
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
-var encryptor encrpt.Encryptor
+var encryptor encrypt.Encryptor
 var ErrNetClosing = errors.New("use of closed network connection")
 
 func TestMain(m *testing.M) {
 	config.Init()
 	password := []byte(config.C.Base.Password)
-	encryptor = encrpt.InitEncrypto(&password, config.C.Base.Crypto, config.C.Base.Padding)
+	encryptor = encrypt.InitEncrypto(&password, config.C.Base.Crypto, config.C.Base.Padding, nil)
 	m.Run()
 }
 func Init() (*net.TCPListener, *net.TCPConn) {
@@ -85,6 +86,7 @@ func (r *rwc) Close() (err error) {
 	r.buf = r.buf[:0]
 	return nil
 }
+
 func TestWriteRead(t *testing.T) {
 	fakelocalConn := &rwc{}
 	flT := &TCPConn{
@@ -93,167 +95,15 @@ func TestWriteRead(t *testing.T) {
 		Reader:    bufio.NewReader(fakelocalConn),
 		Writer:    fakelocalConn,
 		Closer:    fakelocalConn,
-		Encryptor: encryptor,
+		Encryptor: &encryptor,
 	}
-	s := "hello World"
-	flT.EncodeWrite([]byte(s))
-	_, buf, _ := flT.DecodeRead()
-	if string(buf) != s {
-		t.Fatal(s, "!=", buf, "fail to Write and Read")
-	}
-}
-
-func TestCopy(t *testing.T) {
-	server, client := Init()
-	flT := &TCPConn{
-		L:         "",
-		R:         "",
-		Reader:    bufio.NewReader(client),
-		Writer:    client,
-		Closer:    client,
-		Encryptor: encryptor,
-	}
-	conn, connError := server.Accept()
-	if connError != nil {
-		t.Fatal(connError)
-	}
-	connT := &TCPConn{
-		Reader:    bufio.NewReader(conn),
-		Writer:    conn,
-		Closer:    conn,
-		Encryptor: encryptor,
-	}
-	s := "hello World"
-	flT.Write([]byte(s))
-	buf := make([]byte, bufSize)
-	encodeCopy(connT, connT, buf)
-	decodeCopy(flT, flT)
-	n, err := connT.Read(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(buf[:n]) != s {
-		t.Fatal(s, "!=", buf, "fail to Copy")
-	}
-}
-
-func TestCloseEncodeCopy(t *testing.T) {
-	server, client := Init()
-	flT := &TCPConn{
-		L:         "",
-		R:         "",
-		Reader:    bufio.NewReader(client),
-		Writer:    client,
-		Closer:    client,
-		Encryptor: encryptor,
-	}
-	conn, connError := server.Accept()
-	if connError != nil {
-		t.Fatal(connError)
-	}
-	connT := &TCPConn{
-		Reader:    bufio.NewReader(conn),
-		Writer:    conn,
-		Closer:    conn,
-		Encryptor: encryptor,
-	}
-	s := "hello World"
-	flT.Write([]byte(s))
-	connT.Close()
-	buf := make([]byte, bufSize)
-	c, err := encodeCopy(connT, connT, buf)
-	if c != false && err != ErrNetClosing {
-		t.Fatal(err)
-	}
-}
-
-func TestCloseEncodeCopy2(t *testing.T) {
-	server, client := Init()
-	flT := &TCPConn{
-		L:         "",
-		R:         "",
-		Reader:    bufio.NewReader(client),
-		Writer:    client,
-		Closer:    client,
-		Encryptor: encryptor,
-	}
-	conn, connError := server.Accept()
-	if connError != nil {
-		t.Fatal(connError)
-	}
-	connT := &TCPConn{
-		Reader:    bufio.NewReader(conn),
-		Writer:    conn,
-		Closer:    conn,
-		Encryptor: encryptor,
-	}
-	s := "hello World"
-	flT.Write([]byte(s))
-	flT.Close()
-	buf := make([]byte, bufSize)
-	c, err := encodeCopy(connT, flT, buf)
-	if c != false && err != ErrNetClosing {
-		t.Fatal(err)
-	}
-}
-func TestCloseDecodeCopy(t *testing.T) {
-	server, client := Init()
-	flT := &TCPConn{
-		L:         "",
-		R:         "",
-		Reader:    bufio.NewReader(client),
-		Writer:    client,
-		Closer:    client,
-		Encryptor: encryptor,
-	}
-	conn, connError := server.Accept()
-	if connError != nil {
-		t.Fatal(connError)
-	}
-	connT := &TCPConn{
-		Reader:    bufio.NewReader(conn),
-		Writer:    conn,
-		Closer:    conn,
-		Encryptor: encryptor,
-	}
-	s := "hello World"
-	flT.Write([]byte(s))
-	flT.Close()
-	buf := make([]byte, bufSize)
-	encodeCopy(connT, connT, buf)
-	c, err := decodeCopy(flT, flT)
-	if c != false && err != ErrNetClosing {
-		t.Fatal(err)
-	}
-}
-func TestCloseDecodeCopy2(t *testing.T) {
-	server, client := Init()
-	flT := &TCPConn{
-		L:         "",
-		R:         "",
-		Reader:    bufio.NewReader(client),
-		Writer:    client,
-		Closer:    client,
-		Encryptor: encryptor,
-	}
-	conn, connError := server.Accept()
-	if connError != nil {
-		t.Fatal(connError)
-	}
-	connT := &TCPConn{
-		Reader:    bufio.NewReader(conn),
-		Writer:    conn,
-		Closer:    conn,
-		Encryptor: encryptor,
-	}
-	s := "hello World"
-	flT.Write([]byte(s))
-	buf := make([]byte, bufSize)
-	encodeCopy(connT, connT, buf)
-	connT.Close()
-	c, err := decodeCopy(flT, connT)
-	if c != false && err != ErrNetClosing {
-		t.Fatal(err)
+	s := []byte("hello World")
+	b := make([]byte, len(s)+(*flT.Encryptor).Ivlen())
+	flT.ssEncodeWrite(s)
+	flT.Read(b)
+	s2 := (*flT.Encryptor).Decode(b[(*flT.Encryptor).Ivlen():], b[:(*flT.Encryptor).Ivlen()])
+	if string(s2) != string(s) {
+		t.Fatal(s, "!=", s2, "fail to Write and Read")
 	}
 }
 
@@ -265,7 +115,7 @@ func TestEncodeCopy(t *testing.T) {
 		Reader:    bufio.NewReader(client),
 		Writer:    client,
 		Closer:    client,
-		Encryptor: encryptor,
+		Encryptor: &encryptor,
 	}
 	conn, connError := server.Accept()
 	if connError != nil {
@@ -275,10 +125,57 @@ func TestEncodeCopy(t *testing.T) {
 		Reader:    bufio.NewReader(conn),
 		Writer:    conn,
 		Closer:    conn,
-		Encryptor: encryptor,
+		Encryptor: &encryptor,
 	}
-	s := "hello World"
-	flT.Write([]byte(s))
-	connT.Close()
-	connT.EncodeCopy(flT)
+	s := []byte("hello World")
+	flT.Write(s)
+	buf := make([]byte, len(s)+(*connT.Encryptor).Ivlen())
+	go func() {
+		connT.SSEncodeCopy(flT)
+	}()
+	select {
+	case <-time.After(100 * time.Millisecond):
+	}
+	connT.Read(buf)
+	s2 := (*flT.Encryptor).Decode(buf[(*flT.Encryptor).Ivlen():], buf[:(*flT.Encryptor).Ivlen()])
+	if string(s2) != string(s) {
+		t.Fatal(s, "!=", s2, "fail to Write and Read")
+	}
+}
+
+func TestDecodeCopy(t *testing.T) {
+	server, client := Init()
+	flT := &TCPConn{
+		L:         "",
+		R:         "",
+		Reader:    bufio.NewReader(client),
+		Writer:    client,
+		Closer:    client,
+		Encryptor: &encryptor,
+	}
+	conn, connError := server.Accept()
+	if connError != nil {
+		t.Fatal(connError)
+	}
+	connT := &TCPConn{
+		Reader:    bufio.NewReader(conn),
+		Writer:    conn,
+		Closer:    conn,
+		Encryptor: &encryptor,
+	}
+	s := []byte("hello World")
+	flT.ssEncodeWrite(s)
+	buf := make([]byte, len(s)+(*connT.Encryptor).Ivlen())
+	go func() {
+		connT.SSDecodeCopy(connT, nil)
+	}()
+	select {
+	case <-time.After(100 * time.Millisecond):
+	}
+	b, _ := flT.Read(buf)
+	fmt.Println(string(b))
+	s2 := buf[(*flT.Encryptor).Ivlen():]
+	if string(s2) != string(s) {
+		t.Fatal(s, "!=", s2, "fail to Write and Read")
+	}
 }

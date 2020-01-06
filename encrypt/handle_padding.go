@@ -1,6 +1,6 @@
-package encrpt
+package encrypt
 
-import "github/wziww/medusa/encrpt/padding"
+import "github/wziww/medusa/encrypt/padding"
 
 // HandlePadding ...
 func HandlePadding(paddingMode string) func([]byte, int) []byte {
