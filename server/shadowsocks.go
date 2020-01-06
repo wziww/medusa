@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
-	"fmt"
 	"github/wziww/medusa"
 	"github/wziww/medusa/log"
 	"net"
@@ -22,7 +21,6 @@ func sshandleConn(conn *medusa.TCPConn) {
 	// 1(addrType) + 1(lenByte) + 255(max length address) + 2(port) + 10(hmac-sha1)
 	buf := make([]byte, bufsize)
 	n, _ := conn.Read(buf)
-	fmt.Println(n)
 	ivlen := (*conn.Encryptor).Ivlen()
 	if n < ivlen {
 		log.FMTLog(log.LOGDEBUG, "package len error")
