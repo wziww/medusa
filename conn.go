@@ -2,38 +2,16 @@ package medusa
 
 import (
 	"bufio"
-	"encoding/binary"
-	"errors"
-	"github/wziww/medusa/encrpt"
-	"github/wziww/medusa/log"
+	"github/wziww/medusa/encrypt"
 	"github/wziww/medusa/stream"
 	"io"
-	"sync"
-	"sync/atomic"
 )
 
 const tag = 0x80
 
-var bufSize int64 = 1 << 10 //1kb
-
-var bp sync.Pool
+var bufSize int64 = 32 << 10 //1kb
 
 const maxConsecutiveEmptyReads = 100
-
-func init() {
-	bp.New = func() interface{} {
-		b := make([]byte, 8)
-		return &b
-	}
-}
-
-func btsPoolGet() *[]byte {
-	return bp.Get().(*[]byte)
-}
-
-func btsPoolPut(b *[]byte) {
-	bp.Put(b)
-}
 
 // TCPConn ...
 type TCPConn struct {
@@ -42,143 +20,65 @@ type TCPConn struct {
 	*bufio.Reader
 	io.Closer
 	io.Writer
-	Encryptor encrpt.Encryptor
-	MutexR    sync.Mutex
-	MutexW    sync.Mutex
+	Encryptor *encrypt.Encryptor
+	ivSent    *bool
 }
 
-// DecodeRead ...
-func (conn *TCPConn) DecodeRead() (n int, buf []byte, err error) {
-	conn.MutexR.Lock()
-	defer conn.MutexR.Unlock()
-	// /**
-	//   +----+-----+-------+------+----------+----------+
-	//   |LEN | 								DATA 										 |
-	//   +----+-----+-------+------+----------+----------+
-	//   | 8  | 								 x  									   |
-	//   +----+-----+-------+------+----------+----------+
-	// */
-	var l int64
-	// binary.Read(conn, binary.BigEndian, &l)
-	b := btsPoolGet()
-	defer btsPoolPut(b)
-	var readN int
-	readN, err = conn.Read(*b)
-	if err != nil {
-		log.FMTLog(log.LOGDEBUG, err)
-		return
-	}
-	if readN < 8 {
-		// 非法协议
-		return
-	}
-	l = int64(binary.BigEndian.Uint64((*b)[:8]))
-	if l <= 0 || l > (bufSize<<10) {
-		return
-	}
-	atomic.AddUint64(stream.FlowIn, uint64(l))
-	// /**
-	//   +----+-----+-------+------+----------+----------+
-	//   |LEN | 								DATA 										 |
-	//   +----+-----+-------+------+----------+----------+
-	//   | 8  | 					   readN - 8								   |
-	//   +----+-----+-------+------+----------+----------+
-	//   +----+-----+-------+------+----------+----------+
-	//   |         							DATA 										 |
-	//   +----+-----+-------+------+----------+----------+
-	//   |    							l - readN + 8 		 				   |
-	//   +----+-----+-------+------+----------+----------+
-	//   +----+-----+-------+------+----------+----------+
-	//   |         						DATAALL										 |
-	//   +----+-----+-------+------+----------+----------+
-	//   |    							l             		 				   |
-	//   +----+-----+-------+------+----------+----------+
-	//
-	// */
-	data := make([]byte, l)
-	var rm int
-	for i := maxConsecutiveEmptyReads; i > 0; i-- {
-		rn, _ := conn.Read(data[rm:])
-		if rn < 0 {
-			return 0, nil, errors.New("bufio: reader returned negative count from Read")
-		}
-		rm += rn
-		if int64(rm) == l {
-			res := conn.Encryptor.Decode(data)
-			if res != nil {
-				buf = res
-				n = len(res)
-				return
-			}
-			return 0, nil, errors.New("DecodeRead error")
-		}
-	}
-	return 0, nil, io.ErrNoProgress
-}
-
-//EncodeWrite ...
-func (conn *TCPConn) EncodeWrite(buf []byte) (n int, err error) {
-	buf = conn.Encryptor.Encode(buf)
-	if buf != nil {
-		// /**
-		//   +----+-----+-------+------+----------+----------+
-		//   |LEN | 								DATA 										 |
-		//   +----+-----+-------+------+----------+----------+
-		//   | 8  | 								 x  									   |
-		//   +----+-----+-------+------+----------+----------+
-		// */
-		var l int64 = int64(len(buf))
-		atomic.AddUint64(stream.FlowOut, uint64(l))
-		conn.MutexW.Lock()
-		defer conn.MutexW.Unlock()
-		binary.Write(conn, binary.BigEndian, l)
-		return conn.Write(buf)
-	}
-	return
-}
-
-// DecodeCopy 从src中源源不断的读取加密后的数据解密后写入到dst，直到src中没有数据可以再读取
-func (conn *TCPConn) DecodeCopy(dst *TCPConn) error {
-	for {
-		c, err := decodeCopy(conn, dst)
-		if !c {
-			return err
-		}
-	}
-}
-
-func decodeCopy(conn, dst *TCPConn) (bool, error) {
-	readCount, buf, errRead := conn.DecodeRead()
-	if errRead != nil {
-		if errRead != io.EOF {
-			return false, errRead
-		}
-		return false, nil
-	}
-	if readCount > 0 {
-		writeCount, errWrite := dst.Write(buf[:readCount])
-		if errWrite != nil {
-			return false, errWrite
-		}
-		stream.Counter.FlowOutIncr(conn.R, uint64(writeCount))
-		if readCount != writeCount {
-			return false, io.ErrShortWrite
-		}
-	}
-	return true, nil
-}
-
-// EncodeCopy 从src中源源不断的读取原数据加密后写入到dst，直到src中没有数据可以再读取
-func (conn *TCPConn) EncodeCopy(dst *TCPConn) error {
+// SSEncodeCopy 从src中源源不断的读取原数据加密后写入到dst，直到src中没有数据可以再读取
+func (conn *TCPConn) SSEncodeCopy(dst *TCPConn) error {
 	buf := make([]byte, bufSize)
 	for {
-		c, err := encodeCopy(conn, dst, buf)
+		c, err := ssEncodeCopy(conn, dst, buf)
 		if !c {
 			return err
 		}
 	}
 }
-func encodeCopy(conn, dst *TCPConn, buf []byte) (bool, error) {
+
+// SSDecodeCopy 从src中源源不断的读取加密后的数据解密后写入到dst，直到src中没有数据可以再读取
+func (conn *TCPConn) SSDecodeCopy(dst *TCPConn, iv []byte) error {
+	buf := make([]byte, bufSize)
+	for {
+		c, err := ssDecodeCopy(conn, dst, buf, iv)
+		if !c {
+			return err
+		}
+	}
+}
+func (conn *TCPConn) ssEncodeWrite(buf []byte) (int, error) {
+	buf = (*conn.Encryptor).Encode(buf)
+	if conn.ivSent == nil {
+		conn.ivSent = new(bool)
+	}
+	if !(*conn.ivSent) {
+		*conn.ivSent = true
+		buf = append((*conn.Encryptor).GetIv(), buf...)
+	} else {
+		b := make([]byte, len(buf))
+		copy(b, buf)
+	}
+	var n int
+	var e error
+	for i := 0; i < maxConsecutiveEmptyReads; i++ {
+		if n == len(buf) {
+			break
+		}
+		nn, e := conn.Write(buf[n:])
+		n += nn
+		if e != nil {
+			return n, e
+		}
+	}
+	if n != len(buf) {
+		return 0, io.ErrNoProgress
+	}
+	return n, e
+}
+
+func ssEncodeCopy(conn, dst *TCPConn, buf []byte) (bool, error) {
+	if dst.ivSent == nil {
+		dst.ivSent = new(bool)
+	}
 	readCount, errRead := conn.Read(buf)
 	if errRead != nil {
 		if errRead != io.EOF {
@@ -193,13 +93,35 @@ func encodeCopy(conn, dst *TCPConn, buf []byte) (bool, error) {
 			Reader:    bufio.NewReader(dst),
 			Writer:    dst,
 			Closer:    dst,
-			Encryptor: conn.Encryptor,
-		}).EncodeWrite(buf[:readCount])
+			Encryptor: dst.Encryptor,
+			ivSent:    dst.ivSent,
+		}).ssEncodeWrite(buf[:readCount])
 		if errWrite != nil {
 			return false, errWrite
 		}
 		stream.Counter.FlowInIncr(dst.R, uint64(writeCount))
 		if readCount != writeCount && writeCount == 0 {
+			return false, io.ErrShortWrite
+		}
+	}
+	return true, nil
+}
+func ssDecodeCopy(conn, dst *TCPConn, buf, iv []byte) (bool, error) {
+	readCount, errRead := conn.Read(buf)
+	if errRead != nil {
+		if errRead != io.EOF {
+			return false, errRead
+		}
+		return false, nil
+	}
+	if readCount > 0 {
+		buf = (*conn.Encryptor).Decode(buf[:readCount], iv)
+		writeCount, errWrite := dst.Write(buf)
+		if errWrite != nil {
+			return false, errWrite
+		}
+		stream.Counter.FlowOutIncr(conn.R, uint64(writeCount))
+		if readCount != writeCount {
 			return false, io.ErrShortWrite
 		}
 	}
