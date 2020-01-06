@@ -3,32 +3,16 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
+	"fmt"
 	"github/wziww/medusa"
 	"github/wziww/medusa/log"
 	"net"
-	"sync"
 )
 
 var (
 	bufsize uint16 = 32 << 10
 )
 
-var bp sync.Pool
-
-func init() {
-	bp.New = func() interface{} {
-		b := make([]byte, 269)
-		return b
-	}
-}
-
-func btsPoolGet() []byte {
-	return bp.Get().([]byte)
-}
-
-func btsPoolPut(b []byte) {
-	bp.Put(b)
-}
 func sshandleConn(conn *medusa.TCPConn) {
 	defer func() {
 		conn.Close()
@@ -36,11 +20,9 @@ func sshandleConn(conn *medusa.TCPConn) {
 	// buf size should at least have the same size with the largest possible
 	// request size (when addrType is 3, domain name has at most 256 bytes)
 	// 1(addrType) + 1(lenByte) + 255(max length address) + 2(port) + 10(hmac-sha1)
-	buf := btsPoolGet()
-	defer func() {
-		btsPoolPut(buf)
-	}()
+	buf := make([]byte, bufsize)
 	n, _ := conn.Read(buf)
+	fmt.Println(n)
 	ivlen := (*conn.Encryptor).Ivlen()
 	if n < ivlen {
 		log.FMTLog(log.LOGDEBUG, "package len error")
