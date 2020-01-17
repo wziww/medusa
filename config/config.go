@@ -148,7 +148,7 @@ func CheckIPAllow(str string) bool {
 		data = data<<8 | uint32(eachdata)
 	}
 	for _, v := range C.Server.whiteList {
-		if data&v.ipaddr > 0 {
+		if data&v.ipaddr == v.ipaddr {
 			return true
 		}
 	}
@@ -172,7 +172,7 @@ func CheckIPNotAllow(str string) bool {
 		data = data<<8 | uint32(eachdata)
 	}
 	for _, v := range C.Server.blackList {
-		if data&v.ipaddr > 0 { // now allowed
+		if data&v.ipaddr == v.ipaddr { // now allowed
 			return true
 		}
 	}
