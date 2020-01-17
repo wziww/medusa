@@ -51,6 +51,7 @@ func main() {
 			if config.CheckIPNotAllow(localConn.RemoteAddr().String()) {
 				log.FMTLog(log.LOGINFO, localConn.RemoteAddr().String(), "connect refused")
 				localConn.Close()
+				continue
 			}
 		}
 		// log.FMTLog(log.LOGINFO, localConn.RemoteAddr(), "connected")
@@ -58,6 +59,7 @@ func main() {
 		localConn.SetLinger(0)
 		encryptor := encrypt.InitEncrypto(&password, config.C.Base.Crypto, config.C.Base.Padding, []byte(encrypt.GetRandString(encryptor.Ivlen())))
 		if encryptor == nil {
+			localConn.Close()
 			log.FMTLog(log.LOGERROR, "encrypto:", config.C.Base.Crypto, " init error,please checkout your config file")
 			continue
 		}
