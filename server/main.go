@@ -47,6 +47,12 @@ func main() {
 			log.FMTLog(log.LOGERROR, err)
 			continue
 		}
+		if !config.CheckIPAllow(localConn.RemoteAddr().String()) {
+			if config.CheckIPNotAllow(localConn.RemoteAddr().String()) {
+				log.FMTLog(log.LOGINFO, localConn.RemoteAddr().String(), "connect refused")
+				localConn.Close()
+			}
+		}
 		// log.FMTLog(log.LOGINFO, localConn.RemoteAddr(), "connected")
 		// localConn被关闭时直接清除所有数据 不管没有发送的数据
 		localConn.SetLinger(0)
